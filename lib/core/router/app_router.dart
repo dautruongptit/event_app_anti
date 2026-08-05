@@ -15,6 +15,7 @@ import '../../ui/screens/relatives/relative_form_screen.dart';
 import '../../ui/screens/relatives/relative_detail_screen.dart';
 import '../../ui/screens/notifications/notification_screen.dart';
 import '../../ui/screens/profile/profile_screen.dart';
+import '../../ui/screens/profile/login_history_screen.dart';
 import '../../ui/screens/settings/settings_screen.dart';
 import '../../ui/widgets/bottom_nav_scaffold.dart';
 
@@ -55,11 +56,13 @@ class AppRouter {
           path: '/register',
           builder: (context, state) => const RegisterScreen(),
         ),
+        // 4-tab bottom navigation: Home / Người thân / Sự kiện / Tôi
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) {
             return BottomNavScaffold(navigationShell: navigationShell);
           },
           branches: [
+            // Tab 0: Home
             StatefulShellBranch(
               routes: [
                 GoRoute(
@@ -68,36 +71,7 @@ class AppRouter {
                 ),
               ],
             ),
-            StatefulShellBranch(
-              routes: [
-                GoRoute(
-                  path: '/events',
-                  builder: (context, state) => const EventListScreen(),
-                  routes: [
-                    GoRoute(
-                      path: 'create',
-                      builder: (context, state) => const EventFormScreen(),
-                    ),
-                    GoRoute(
-                      path: ':id',
-                      builder: (context, state) {
-                        final id = int.parse(state.pathParameters['id']!);
-                        return EventDetailScreen(eventId: id);
-                      },
-                      routes: [
-                        GoRoute(
-                          path: 'edit',
-                          builder: (context, state) {
-                            final id = int.parse(state.pathParameters['id']!);
-                            return EventFormScreen(eventId: id);
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            // Tab 1: Người thân
             StatefulShellBranch(
               routes: [
                 GoRoute(
@@ -128,14 +102,38 @@ class AppRouter {
                 ),
               ],
             ),
+            // Tab 2: Sự kiện
             StatefulShellBranch(
               routes: [
                 GoRoute(
-                  path: '/notifications',
-                  builder: (context, state) => const NotificationScreen(),
+                  path: '/events',
+                  builder: (context, state) => const EventListScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'create',
+                      builder: (context, state) => const EventFormScreen(),
+                    ),
+                    GoRoute(
+                      path: ':id',
+                      builder: (context, state) {
+                        final id = int.parse(state.pathParameters['id']!);
+                        return EventDetailScreen(eventId: id);
+                      },
+                      routes: [
+                        GoRoute(
+                          path: 'edit',
+                          builder: (context, state) {
+                            final id = int.parse(state.pathParameters['id']!);
+                            return EventFormScreen(eventId: id);
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
+            // Tab 3: Tôi (Profile)
             StatefulShellBranch(
               routes: [
                 GoRoute(
@@ -145,6 +143,14 @@ class AppRouter {
                     GoRoute(
                       path: 'settings',
                       builder: (context, state) => const SettingsScreen(),
+                    ),
+                    GoRoute(
+                      path: 'notifications',
+                      builder: (context, state) => const NotificationScreen(),
+                    ),
+                    GoRoute(
+                      path: 'login-history',
+                      builder: (context, state) => const LoginHistoryScreen(),
                     ),
                   ],
                 ),

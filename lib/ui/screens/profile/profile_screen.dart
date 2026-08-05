@@ -5,6 +5,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/auth_provider.dart';
+import 'package:event_app/providers/notification_provider.dart';
+import 'package:event_app/core/theme/theme_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,20 +21,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AuthProvider>().loadProfile();
+      context.read<NotificationProvider>().loadUnreadCount();
     });
   }
 
-  void _confirmLogout() {
+  void _confirmLogout(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Đăng xuất'),
-        content: const Text('Bạn có chắc muốn đăng xuất?'),
+        title: Text('Đăng xuất', style: AppTextStyles.heading3),
+        content: Text('Bạn có chắc muốn đăng xuất khỏi tài khoản?', style: AppTextStyles.body),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Huỷ'),
+            child: Text(
+              'Huỷ',
+              style: AppTextStyles.button.copyWith(color: AppColors.textSecondaryLight),
+            ),
           ),
           TextButton(
             onPressed: () async {
@@ -42,8 +48,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context.go('/login');
               }
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text('Đăng xuất'),
+            child: Text(
+              'Đăng xuất',
+              style: AppTextStyles.button.copyWith(color: AppColors.error),
+            ),
           ),
         ],
       ),
@@ -53,192 +61,274 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
+    final unreadCount = context.watch<NotificationProvider>().unreadCount;
     final user = authProvider.user;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = themeProvider.isDarkMode;
+
+    int daysActive = 0;
+    if (user?.createdAt != null) {
+      daysActive = DateTime.now().difference(user!.createdAt!).inDays;
+    }
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       body: RefreshIndicator(
-        onRefresh: () => authProvider.loadProfile(),
-        child: CustomScrollView(
-          slivers: [
-            // Gradient Header
-            SliverToBoxAdapter(
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 60, 20, 30),
-                decoration: const BoxDecoration(
-                  gradient: AppColors.primaryGradient,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(32),
-                    bottomRight: Radius.circular(32),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    // Avatar
-                    GestureDetector(
-                      onTap: () => context.push('/profile/settings'),
-                      child: Stack(
+        onRefresh: () async {
+          await context.read<AuthProvider>().loadProfile();
+          if (context.mounted) {
+            await context.read<NotificationProvider>().loadUnreadCount();
+          }
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header Segment
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 60),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(top: 80, bottom: 40),
+                      decoration: BoxDecoration(
+                        gradient: AppColors.accentGradient,
+                        borderRadius: BorderRadius.vertical(
+                          bottom: Radius.elliptical(MediaQuery.of(context).size.width, 50),
+                        ),
+                      ),
+                      child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundColor: Colors.white.withValues(alpha: 0.2),
-                            child: user?.avatarUrl != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      user!.avatarUrl!,
-                                      width: 96,
-                                      height: 96,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => _buildInitials(user.fullName),
-                                    ),
-                                  )
-                                : _buildInitials(user?.fullName ?? '?'),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: AppColors.accentLight,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                              ),
-                              child: const Icon(Icons.edit_rounded, size: 14, color: Colors.white),
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
                             ),
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
+                              child: user?.avatarUrl == null
+                                  ? Text(
+                                      (user?.fullName.isNotEmpty == true) ? user!.fullName[0].toUpperCase() : '?',
+                                      style: AppTextStyles.heading1.copyWith(color: Colors.white),
+                                    )
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            user?.fullName ?? 'Đang tải...',
+                            style: AppTextStyles.heading2.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            user?.email ?? '',
+                            style: AppTextStyles.body.copyWith(color: Colors.white.withValues(alpha: 0.9)),
                           ),
                         ],
                       ),
-                    ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
-                    const SizedBox(height: 16),
-                    Text(
-                      user?.fullName ?? 'Đang tải...',
-                      style: AppTextStyles.heading2.copyWith(color: Colors.white),
-                    ).animate().fadeIn(delay: 200.ms),
-                    const SizedBox(height: 4),
-                    Text(
-                      user?.email ?? '',
-                      style: AppTextStyles.bodySmall.copyWith(color: Colors.white70),
-                    ).animate().fadeIn(delay: 300.ms),
-                  ],
+                    ),
+                  ),
+                  // Overlapping Stats
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatCircle('Sự kiện', '${user?.totalEvents ?? 0}', AppColors.tealGradient, isDark),
+                        _buildStatCircle('Người thân', '${user?.totalRelatives ?? 0}', AppColors.tealGradient, isDark),
+                        _buildStatCircle('Ngày HL', '$daysActive', AppColors.tealGradient, isDark),
+                      ],
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.1),
+
+              const SizedBox(height: 32),
+              
+              // Google Calendar Card
+              _buildGoogleCalendarCard(context, isDark).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
+
+              const SizedBox(height: 24),
+              
+              // Tài Khoản Section
+              _buildSectionTitle('TÀI KHOẢN', isDark).animate().fadeIn(delay: 300.ms),
+              _buildAccountMenu(context, isDark, unreadCount).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1),
+
+              const SizedBox(height: 24),
+
+              // Cài Đặt Section
+              _buildSectionTitle('CÀI ĐẶT', isDark).animate().fadeIn(delay: 400.ms),
+              _buildSettingsMenu(context, isDark).animate().fadeIn(delay: 450.ms).slideY(begin: 0.1),
+
+              const SizedBox(height: 32),
+
+              // Logout Button
+              Center(
+                child: TextButton(
+                  onPressed: () => _confirmLogout(context),
+                  child: Text(
+                    'Đăng xuất',
+                    style: AppTextStyles.button.copyWith(color: AppColors.error),
+                  ),
                 ),
-              ),
-            ),
+              ).animate().fadeIn(delay: 500.ms),
 
-            // Stats
-            SliverPadding(
-              padding: const EdgeInsets.all(20),
-              sliver: SliverToBoxAdapter(
-                child: Row(
-                  children: [
-                    _buildStatCard(
-                      icon: Icons.calendar_today_rounded,
-                      value: '${user?.totalEvents ?? 0}',
-                      label: 'Sự kiện',
-                      color: AppColors.primaryLight,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatCard(
-                      icon: Icons.people_rounded,
-                      value: '${user?.totalRelatives ?? 0}',
-                      label: 'Người thân',
-                      color: AppColors.secondaryLight,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildStatCard(
-                      icon: Icons.timer_rounded,
-                      value: user?.daysUntilNextEvent != null
-                          ? '${user!.daysUntilNextEvent}'
-                          : '-',
-                      label: 'Ngày tới SK',
-                      color: AppColors.accentLight,
-                      isDark: isDark,
-                    ),
-                  ],
-                ).animate().fadeIn(delay: 400.ms).slideY(begin: 0.2),
-              ),
-            ),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-            // Menu
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _buildMenuItem(
-                    icon: Icons.settings_rounded,
-                    title: 'Cài đặt',
-                    subtitle: 'Giao diện, ngôn ngữ, ảnh đại diện',
-                    onTap: () => context.push('/profile/settings'),
-                    isDark: isDark,
-                  ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.05),
-                  const SizedBox(height: 12),
-                  _buildMenuItem(
-                    icon: Icons.logout_rounded,
-                    title: 'Đăng xuất',
-                    subtitle: 'Thoát khỏi tài khoản',
-                    onTap: _confirmLogout,
-                    isDark: isDark,
-                    isDestructive: true,
-                  ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.05),
-                  const SizedBox(height: 40),
-                ]),
+  Widget _buildStatCircle(String label, String value, LinearGradient gradient, bool isDark) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: gradient,
+            border: Border.all(color: Colors.white, width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.colors.first.withValues(alpha: 0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: AppTextStyles.heading3.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoogleCalendarCard(BuildContext context, bool isDark) {
+    return GestureDetector(
+      onTap: () {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Tính năng đang phát triển', style: AppTextStyles.heading3),
+            content: Text('Tính năng kết nối Google Calendar sẽ sớm ra mắt.', style: AppTextStyles.body),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Đóng', style: AppTextStyles.button.copyWith(color: AppColors.primaryLight)),
+              ),
+            ],
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : AppColors.cardLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDark ? Colors.transparent : Colors.grey.withValues(alpha: 0.15)),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.calendar_month_rounded, color: Colors.blue, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Google Calendar',
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Chưa kết nối',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
+            Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInitials(String name) {
-    return Text(
-      name.isNotEmpty ? name[0].toUpperCase() : '?',
-      style: AppTextStyles.heading1.copyWith(color: Colors.white),
+  Widget _buildSectionTitle(String title, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      child: Text(
+        title,
+        style: AppTextStyles.label.copyWith(
+          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+        ),
+      ),
     );
   }
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color color,
-    required bool isDark,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-          boxShadow: isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.1),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 8),
-            Text(value, style: AppTextStyles.heading2.copyWith(color: color)),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppTextStyles.caption.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+  Widget _buildMenuCard({required List<Widget> children, required bool isDark}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.transparent : Colors.grey.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: children,
       ),
     );
   }
@@ -246,39 +336,114 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildMenuItem({
     required IconData icon,
     required String title,
-    required String subtitle,
-    required VoidCallback onTap,
+    Widget? trailing,
+    VoidCallback? onTap,
     required bool isDark,
-    bool isDestructive = false,
   }) {
-    final color = isDestructive ? AppColors.error : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight);
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDestructive
-              ? AppColors.error.withValues(alpha: 0.2)
-              : Colors.grey.withValues(alpha: 0.15),
+    return ListTile(
+      leading: Icon(icon, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+      title: Text(
+        title,
+        style: AppTextStyles.body.copyWith(
+          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+          fontWeight: FontWeight.w500,
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-        leading: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: (isDestructive ? AppColors.error : AppColors.primaryLight).withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+      trailing: trailing ??
+          Icon(Icons.chevron_right, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildAccountMenu(BuildContext context, bool isDark, int unreadCount) {
+    return _buildMenuCard(
+      isDark: isDark,
+      children: [
+        _buildMenuItem(
+          icon: Icons.person_outline,
+          title: 'Thông tin cá nhân',
+          isDark: isDark,
+          onTap: () => context.push('/profile/settings'),
+        ),
+        const Divider(height: 1, indent: 56),
+        _buildMenuItem(
+          icon: Icons.notifications_none,
+          title: 'Thông báo',
+          isDark: isDark,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (unreadCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
+                  child: Text('$unreadCount', style: AppTextStyles.caption.copyWith(color: Colors.white)),
+                ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+            ],
           ),
-          child: Icon(icon, color: isDestructive ? AppColors.error : AppColors.primaryLight),
+          onTap: () => context.push('/profile/notifications'),
         ),
-        title: Text(title, style: AppTextStyles.subtitle.copyWith(color: color)),
-        subtitle: Text(subtitle, style: AppTextStyles.bodySmall.copyWith(
-          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-        )),
-        trailing: Icon(Icons.chevron_right_rounded, color: color),
-        onTap: onTap,
-      ),
+        const Divider(height: 1, indent: 56),
+        _buildMenuItem(
+          icon: Icons.language,
+          title: 'Ngôn ngữ',
+          isDark: isDark,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Tiếng Việt',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+            ],
+          ),
+          onTap: () => context.push('/profile/settings'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsMenu(BuildContext context, bool isDark) {
+    return _buildMenuCard(
+      isDark: isDark,
+      children: [
+        _buildMenuItem(
+          icon: Icons.dark_mode_outlined,
+          title: 'Chế độ tối',
+          isDark: isDark,
+          trailing: Switch(
+            value: isDark,
+            onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
+            activeColor: AppColors.primaryLight,
+          ),
+        ),
+        const Divider(height: 1, indent: 56),
+        _buildMenuItem(
+          icon: Icons.lock_outline,
+          title: 'Bảo mật & Quyền riêng tư',
+          isDark: isDark,
+          onTap: () => context.push('/profile/login-history'),
+        ),
+        const Divider(height: 1, indent: 56),
+        _buildMenuItem(
+          icon: Icons.help_outline,
+          title: 'Trợ giúp & Hỗ trợ',
+          isDark: isDark,
+          onTap: () {
+            showAboutDialog(
+              context: context,
+              applicationName: 'Event App',
+              applicationVersion: '1.0.0',
+            );
+          },
+        ),
+      ],
     );
   }
 }

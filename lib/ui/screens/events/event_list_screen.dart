@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
-import '../../../providers/event_provider.dart';
-import '../../../models/event.dart';
+import 'package:event_app/core/constants/app_colors.dart';
+import 'package:event_app/core/constants/app_text_styles.dart';
+import 'package:event_app/providers/event_provider.dart';
+import 'package:event_app/models/event.dart';
+import 'package:event_app/core/utils/date_utils.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -15,6 +15,18 @@ class EventListScreen extends StatefulWidget {
 }
 
 class _EventListScreenState extends State<EventListScreen> {
+  final List<Map<String, String>> _filters = [
+    {'label': 'Tất cả', 'value': 'ALL'},
+    {'label': 'Sinh nhật', 'value': 'SINH_NHAT'},
+    {'label': 'Kỷ niệm', 'value': 'KY_NIEM'},
+    {'label': 'Lễ', 'value': 'LE'},
+    {'label': 'Nhà ở', 'value': 'NHA_O'},
+    {'label': 'Hoá đơn', 'value': 'HOA_DON'},
+    {'label': 'Mua sắm', 'value': 'MUA_SAM'},
+  ];
+
+  String _selectedFilter = 'ALL';
+
   @override
   void initState() {
     super.initState();
@@ -23,256 +35,457 @@ class _EventListScreenState extends State<EventListScreen> {
     });
   }
 
+  IconData _getIconForFilter(String value) {
+    switch (value) {
+      case 'ALL':
+        return Icons.all_inclusive_rounded;
+      case 'SINH_NHAT':
+        return Icons.cake_rounded;
+      case 'KY_NIEM':
+        return Icons.favorite_rounded;
+      case 'LE':
+        return Icons.celebration_rounded;
+      case 'NHA_O':
+        return Icons.home_rounded;
+      case 'HOA_DON':
+        return Icons.receipt_long_rounded;
+      case 'MUA_SAM':
+        return Icons.shopping_bag_rounded;
+      default:
+        return Icons.event_rounded;
+    }
+  }
+
+  void _onFilterChanged(String value) {
+    setState(() {
+      _selectedFilter = value;
+    });
+    if (value == 'ALL') {
+      context.read<EventProvider>().clearFilters();
+    } else {
+      context.read<EventProvider>().setFilter(type: value);
+    }
+  }
+
+  Map<String, List<EventModel>> _groupEventsByMonth(List<EventModel> events) {
+    final Map<String, List<EventModel>> grouped = {};
+    for (var event in events) {
+      final monthYear = 'Tháng ${event.eventDate.month}, ${event.eventDate.year}';
+      if (!grouped.containsKey(monthYear)) {
+        grouped[monthYear] = [];
+      }
+      grouped[monthYear]!.add(event);
+    }
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final eventProvider = context.watch<EventProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final provider = context.watch<EventProvider>();
+    final isLoading = provider.isLoading;
+    final events = provider.events;
+    final groupedEvents = _groupEventsByMonth(events);
+
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      appBar: AppBar(
-        title: Text('Sự kiện', style: AppTextStyles.heading2),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.filter_list_rounded, color: isDark ? Colors.white : Colors.black),
-            onPressed: () {
-              // Show filter dialog or bottom sheet
-            },
-          ),
-        ],
-      ),
+      backgroundColor: AppColors.bgLight,
       body: Column(
         children: [
-          _buildFilterChips(context, isDark, eventProvider),
+          _buildHeader(),
+          _buildMonthSlider(),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: () => context.read<EventProvider>().loadEvents(),
-              child: eventProvider.isLoading && eventProvider.events.isEmpty
-                  ? const Center(child: CircularProgressIndicator())
-                  : eventProvider.events.isEmpty
-                      ? _buildEmptyState(isDark)
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: eventProvider.events.length,
-                          itemBuilder: (context, index) {
-                            final event = eventProvider.events[index];
-                            return _buildEventCard(context, event, isDark, index);
-                          },
-                        ),
-            ),
+            child: isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: AppColors.accentLight,
+                    ),
+                  )
+                : events.isEmpty
+                    ? _buildEmptyState()
+                    : _buildEventList(groupedEvents),
           ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.go('/events/create'),
-        backgroundColor: AppColors.primaryLight,
-        child: const Icon(Icons.add, color: Colors.white),
-      ).animate().scale(delay: 400.ms),
-    );
-  }
-
-  Widget _buildFilterChips(BuildContext context, bool isDark, EventProvider provider) {
-    final types = {
-      'Tất cả': null,
-      'Sinh nhật': 'SINH_NHAT',
-      'Kỷ niệm': 'KY_NIEM',
-      'Lễ': 'LE',
-      'Khác': 'KHAC',
-    };
-
-    return SizedBox(
-      height: 50,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: types.length,
-        itemBuilder: (context, index) {
-          final entry = types.entries.elementAt(index);
-          final isSelected = provider.filterType == entry.value;
-          
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(
-                entry.key,
-                style: AppTextStyles.body.copyWith(
-                  color: isSelected 
-                      ? Colors.white 
-                      : (isDark ? Colors.white70 : Colors.black87),
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  provider.setFilter(type: entry.value);
-                } else if (entry.value != null) {
-                  provider.clearFilters();
-                }
-              },
-              backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
-              selectedColor: AppColors.primaryLight,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected ? Colors.transparent : (isDark ? Colors.white12 : Colors.black12),
-                ),
-              ),
-            ),
-          ).animate().fadeIn(delay: (index * 50).ms).slideX(begin: 0.2);
+        onPressed: () {
+          Navigator.pushNamed(context, '/events/create');
         },
-      ),
+        backgroundColor: AppColors.accentLight,
+        child: const Icon(Icons.add_rounded, color: AppColors.surfaceLight),
+      ).animate().scale(delay: 400.ms, duration: 400.ms, curve: Curves.easeOutBack),
     );
   }
 
-  Widget _buildEventCard(BuildContext context, EventModel event, bool isDark, int index) {
-    final color = AppColors.eventTypeColors[event.eventType] ?? AppColors.primaryLight;
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+  Widget _buildHeader() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.only(top: 60, bottom: 40, left: 24, right: 24),
+          decoration: const BoxDecoration(
+            gradient: AppColors.accentGradient,
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: IntrinsicHeight(
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(width: 8, color: color),
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => context.go('/events/${event.id}'),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: color.withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(event.eventTypeIcon, color: color, size: 20),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  event.title,
-                                  style: AppTextStyles.heading3.copyWith(
-                                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                                  ),
-                                ),
-                              ),
-                              if (event.daysUntilText.isNotEmpty)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: color,
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    event.daysUntilText,
-                                    style: AppTextStyles.caption.copyWith(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_month_rounded, size: 16, color: AppColors.textSecondaryLight),
-                              const SizedBox(width: 6),
-                              Text(
-                                '${event.eventDate.day}/${event.eventDate.month}/${event.eventDate.year}',
-                                style: AppTextStyles.body.copyWith(
-                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                ),
-                              ),
-                              if (event.eventTime != null) ...[
-                                const SizedBox(width: 16),
-                                Icon(Icons.access_time_rounded, size: 16, color: AppColors.textSecondaryLight),
-                                const SizedBox(width: 6),
-                                Text(
-                                  event.eventTime!,
-                                  style: AppTextStyles.body.copyWith(
-                                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          if (event.relativeName != null) ...[
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(Icons.person_rounded, size: 16, color: AppColors.textSecondaryLight),
-                                const SizedBox(width: 6),
-                                Text(
-                                  event.relativeName!,
-                                  style: AppTextStyles.body.copyWith(
-                                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sự kiện',
+                    style: AppTextStyles.heading1.copyWith(color: AppColors.surfaceLight),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Quản lý và theo dõi',
+                    style: AppTextStyles.body.copyWith(
+                      color: AppColors.surfaceLight.withValues(alpha: 0.8),
                     ),
                   ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.filter_list_rounded,
+                  color: AppColors.surfaceLight,
                 ),
               ),
             ],
           ),
         ),
-      ),
-    ).animate().fadeIn(delay: (index * 100).ms).slideY(begin: 0.1);
+        Positioned(
+          bottom: -20,
+          left: 0,
+          right: 0,
+          child: SizedBox(
+            height: 40,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              scrollDirection: Axis.horizontal,
+              itemCount: _filters.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final filter = _filters[index];
+                final isSelected = _selectedFilter == filter['value'];
+                return GestureDetector(
+                  onTap: () => _onFilterChanged(filter['value']!),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppColors.surfaceLight
+                          : AppColors.surfaceLight.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppColors.textPrimaryLight.withValues(alpha: 0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              )
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getIconForFilter(filter['value']!),
+                          size: 16,
+                          color: isSelected
+                              ? AppColors.accentLight
+                              : AppColors.textSecondaryLight,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          filter['label']!,
+                          style: AppTextStyles.label.copyWith(
+                            color: isSelected
+                                ? AppColors.accentLight
+                                : AppColors.textSecondaryLight,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  Widget _buildEmptyState(bool isDark) {
+  Widget _buildMonthSlider() {
+    final progress = DateTime.now().month / 12;
+    return Container(
+      margin: const EdgeInsets.only(top: 40, bottom: 16, left: 24, right: 24),
+      height: 4,
+      decoration: BoxDecoration(
+        color: AppColors.textSecondaryLight.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: progress,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: AppColors.accentGradient,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 600.ms).slideX(begin: -0.2, end: 0);
+  }
+
+  Widget _buildEventList(Map<String, List<EventModel>> groupedEvents) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      itemCount: groupedEvents.length,
+      itemBuilder: (context, index) {
+        final monthKey = groupedEvents.keys.elementAt(index);
+        final eventsInMonth = groupedEvents[monthKey]!;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12, top: 8),
+              child: Text(
+                monthKey,
+                style: AppTextStyles.heading3.copyWith(
+                  color: AppColors.textPrimaryLight,
+                ),
+              ),
+            ),
+            ...eventsInMonth.map((event) => _buildEventCard(event)).toList(),
+          ],
+        ).animate().fadeIn(delay: (100 * index).ms).slideY(begin: 0.1, end: 0);
+      },
+    );
+  }
+
+  Widget _buildEventCard(EventModel event) {
+    final Color iconColor = AppColors.eventTypeColors[event.eventType] ?? AppColors.accentLight;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.textSecondaryLight.withValues(alpha: 0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textPrimaryLight.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              event.eventTypeIcon,
+              color: iconColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: AppColors.textPrimaryLight,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (event.relativeName != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    event.relativeName!,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondaryLight,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 14,
+                      color: AppColors.textSecondaryLight,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      AppDateUtils.formatDate(event.eventDate),
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                    if (event.eventTime != null && event.eventTime!.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: AppColors.textSecondaryLight,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        AppDateUtils.formatTime(event.eventTime),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondaryLight,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            icon: Icon(
+              Icons.more_horiz_rounded,
+              color: AppColors.textSecondaryLight,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            onSelected: (value) {
+              if (value == 'edit') {
+                Navigator.pushNamed(context, '/events/edit', arguments: event.id);
+              } else if (value == 'delete') {
+                _confirmDelete(event);
+              }
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_rounded, size: 20, color: AppColors.textPrimaryLight),
+                    const SizedBox(width: 8),
+                    Text('Chỉnh sửa', style: AppTextStyles.body),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_rounded, size: 20, color: AppColors.error),
+                    const SizedBox(width: 8),
+                    Text('Xóa', style: AppTextStyles.body.copyWith(color: AppColors.error)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.event_busy_rounded,
-            size: 80,
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
-          ).animate().scale(delay: 200.ms, duration: 400.ms),
+            size: 64,
+            color: AppColors.textSecondaryLight.withValues(alpha: 0.3),
+          ),
           const SizedBox(height: 16),
           Text(
-            'Chưa có sự kiện nào',
+            'Không có sự kiện nào',
             style: AppTextStyles.heading3.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
-          ).animate().fadeIn(delay: 400.ms),
+          ),
           const SizedBox(height: 8),
           Text(
-            'Hãy nhấn nút + để tạo sự kiện mới',
+            'Thêm sự kiện để bắt đầu theo dõi',
             style: AppTextStyles.body.copyWith(
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              color: AppColors.textSecondaryLight,
             ),
-          ).animate().fadeIn(delay: 500.ms),
+          ),
+        ],
+      ).animate().fadeIn().scale(),
+    );
+  }
+
+  Future<void> _confirmDelete(EventModel event) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Xóa sự kiện', style: AppTextStyles.heading2),
+        content: Text(
+          'Bạn có chắc chắn muốn xóa sự kiện "${event.title}" không?',
+          style: AppTextStyles.body,
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Hủy',
+              style: AppTextStyles.button.copyWith(color: AppColors.textSecondaryLight),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Xóa',
+              style: AppTextStyles.button.copyWith(color: AppColors.surfaceLight),
+            ),
+          ),
         ],
       ),
     );
+
+    if (result == true && mounted) {
+      await context.read<EventProvider>().deleteEvent(event.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã xóa sự kiện', style: AppTextStyles.body.copyWith(color: AppColors.surfaceLight)),
+            backgroundColor: AppColors.textPrimaryLight,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }

@@ -1,10 +1,8 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:intl/intl.dart';
 import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/relative_provider.dart';
@@ -20,9 +18,6 @@ class RelativeListScreen extends StatefulWidget {
 
 class _RelativeListScreenState extends State<RelativeListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  Timer? _debounce;
-  final List<String> _groupTypes = ['', 'GIA_DINH', 'VO_CHONG', 'CON_CAI', 'BAN_BE'];
-  final List<String> _groupLabels = ['Tất cả', 'Gia đình', 'Vợ/Chồng', 'Con cái', 'Bạn bè'];
 
   @override
   void initState() {
@@ -37,358 +32,380 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
-    _debounce?.cancel();
     super.dispose();
   }
 
-  void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      context.read<RelativeProvider>().setSearchQuery(query.isEmpty ? null : query);
-    });
+  int _getTotalCount(List<GroupSummary> summaries) {
+    return summaries.fold(0, (sum, item) => sum + item.count);
   }
 
-  Color _getGroupColor(String? groupType) {
-    switch (groupType) {
-      case 'GIA_DINH':
-        return AppColors.primaryLight;
-      case 'VO_CHONG':
-        return Colors.pink;
-      case 'CON_CAI':
-        return Colors.green;
-      case 'BAN_BE':
-        return Colors.orange;
-      default:
-        return Colors.grey;
+  int _getGroupCount(List<GroupSummary> summaries, String type) {
+    try {
+      return summaries.firstWhere((s) => s.groupType == type).count;
+    } catch (_) {
+      return 0;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RelativeProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final totalCount = _getTotalCount(provider.groupSummary);
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(provider, isDark),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  await provider.loadRelatives();
-                  await provider.loadGroupSummary();
-                },
-                child: _buildContent(provider, isDark),
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/relatives/create'),
-        backgroundColor: AppColors.primaryLight,
-        child: const Icon(Icons.add, color: Colors.white),
-      ).animate().scale(),
-    );
-  }
-
-  Widget _buildHeader(RelativeProvider provider, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Người thân', style: AppTextStyles.heading1),
-          const SizedBox(height: 16),
-          _buildSearchBox(isDark),
-          const SizedBox(height: 16),
-          _buildFilterChips(provider, isDark),
-          const SizedBox(height: 16),
-          _buildGroupSummary(provider, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchBox(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.grey[800] : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: _searchController,
-        onChanged: _onSearchChanged,
-        decoration: InputDecoration(
-          hintText: 'Tìm kiếm người thân...',
-          prefixIcon: const Icon(Icons.search, color: Colors.grey),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChips(RelativeProvider provider, bool isDark) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: List.generate(_groupTypes.length, (index) {
-          final type = _groupTypes[index];
-          final label = _groupLabels[index];
-          final isSelected = (provider.filterGroupType ?? '') == type;
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text(label),
-              selected: isSelected,
-              onSelected: (selected) {
-                provider.setGroupFilter(type.isEmpty ? null : type);
-              },
-              selectedColor: _getGroupColor(type).withValues(alpha: 0.2),
-              backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-              labelStyle: TextStyle(
-                color: isSelected ? _getGroupColor(type) : (isDark ? Colors.white70 : Colors.black87),
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-              side: BorderSide(
-                color: isSelected ? _getGroupColor(type) : Colors.transparent,
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  Widget _buildGroupSummary(RelativeProvider provider, bool isDark) {
-    if (provider.groupSummary.isEmpty) return const SizedBox.shrink();
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: provider.groupSummary.map((summary) {
-          final color = _getGroupColor(summary.groupType);
-          return Container(
-            margin: const EdgeInsets.only(right: 12),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+      backgroundColor: AppColors.bgLight,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Stack(
+              clipBehavior: Clip.none,
               children: [
-                Text(
-                  _getGroupLabel(summary.groupType),
-                  style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12),
-                ),
-                const SizedBox(width: 8),
+                // Gradient Header
                 Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 80),
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.accentGradient,
+                    borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(32),
+                      bottomRight: Radius.circular(32),
+                    ),
                   ),
-                  child: Text(
-                    '${summary.count}',
-                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Người thân',
+                        style: AppTextStyles.heading1.copyWith(color: AppColors.surfaceLight),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$totalCount người',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.surfaceLight.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // 4 Group Cards
+                Positioned(
+                  top: 140,
+                  left: 24,
+                  right: 24,
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                    childAspectRatio: 1.5,
+                    children: [
+                      _buildGroupCard(
+                        'GIA_DINH',
+                        'Gia đình',
+                        '👨‍👩‍👧‍👦',
+                        AppColors.groupTypeColors['GIA_DINH'] ?? AppColors.primaryLight,
+                        _getGroupCount(provider.groupSummary, 'GIA_DINH'),
+                        provider.filterGroupType == 'GIA_DINH',
+                      ),
+                      _buildGroupCard(
+                        'VO_CHONG',
+                        'Vợ/Chồng',
+                        '❤️',
+                        AppColors.groupTypeColors['VO_CHONG'] ?? AppColors.accentLight,
+                        _getGroupCount(provider.groupSummary, 'VO_CHONG'),
+                        provider.filterGroupType == 'VO_CHONG',
+                      ),
+                      _buildGroupCard(
+                        'CON_CAI',
+                        'Con cái',
+                        '👶',
+                        AppColors.groupTypeColors['CON_CAI'] ?? AppColors.secondaryLight,
+                        _getGroupCount(provider.groupSummary, 'CON_CAI'),
+                        provider.filterGroupType == 'CON_CAI',
+                      ),
+                      _buildGroupCard(
+                        'BAN_BE',
+                        'Bạn bè',
+                        '👥',
+                        AppColors.groupTypeColors['BAN_BE'] ?? AppColors.warning,
+                        _getGroupCount(provider.groupSummary, 'BAN_BE'),
+                        provider.filterGroupType == 'BAN_BE',
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-          );
-        }).toList(),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 120)), // Space for overlap
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Danh sách',
+                    style: AppTextStyles.heading2.copyWith(color: AppColors.textPrimaryLight),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.textPrimaryLight.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) {
+                        provider.setSearchQuery(value.isEmpty ? null : value);
+                      },
+                      style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryLight),
+                      decoration: InputDecoration(
+                        hintText: 'Tìm kiếm...',
+                        hintStyle: AppTextStyles.body.copyWith(
+                          color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
+                        ),
+                        prefixIcon: const Icon(Icons.search, color: AppColors.textSecondaryLight),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          if (provider.isLoading)
+            const SliverToBoxAdapter(
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: CircularProgressIndicator(color: AppColors.accentLight),
+                ),
+              ),
+            )
+          else if (provider.relatives.isEmpty)
+            SliverToBoxAdapter(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Text(
+                    'Không có người thân nào',
+                    style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryLight),
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final relative = provider.relatives[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
+                    child: _buildRelativeCard(relative, index),
+                  );
+                },
+                childCount: provider.relatives.length,
+              ),
+            ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+        ],
       ),
     );
   }
-  
-  String _getGroupLabel(String type) {
-    final idx = _groupTypes.indexOf(type);
-    if (idx != -1) return _groupLabels[idx];
-    return type;
-  }
 
-  Widget _buildContent(RelativeProvider provider, bool isDark) {
-    if (provider.isLoading && provider.relatives.isEmpty) {
-      return _buildShimmerLoading();
-    }
-
-    if (provider.error != null && provider.relatives.isEmpty) {
-      return Center(
-        child: Text(provider.error!, style: const TextStyle(color: Colors.red)),
-      );
-    }
-
-    if (provider.relatives.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'Chưa có người thân nào',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+  Widget _buildGroupCard(
+      String type, String title, String emoji, Color color, int count, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        final provider = context.read<RelativeProvider>();
+        if (isSelected) {
+          provider.setGroupFilter(null);
+        } else {
+          provider.setGroupFilter(type);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: isSelected
+              ? Border.all(color: color, width: 2)
+              : Border.all(color: Colors.transparent, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimaryLight.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
-        ).animate().fadeIn(),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: provider.relatives.length,
-      itemBuilder: (context, index) {
-        final relative = provider.relatives[index];
-        return _buildRelativeCard(relative, isDark)
-            .animate()
-            .fadeIn(delay: Duration(milliseconds: 50 * index))
-            .slideY(begin: 0.2, end: 0);
-      },
-    );
-  }
-
-  Widget _buildRelativeCard(RelativeModel relative, bool isDark) {
-    final color = _getGroupColor(relative.groupType);
-    
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
-      ),
-      child: InkWell(
-        onTap: () => context.push('/relatives/${relative.id}'),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Hero(
-                tag: 'avatar_${relative.id}',
-                child: CircleAvatar(
-                  radius: 28,
-                  backgroundColor: color.withValues(alpha: 0.2),
-                  backgroundImage: relative.avatarUrl != null ? NetworkImage(relative.avatarUrl!) : null,
-                  child: relative.avatarUrl == null
-                      ? Text(
-                          relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?',
-                          style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 20),
-                        )
-                      : null,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(emoji, style: const TextStyle(fontSize: 16)),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: AppTextStyles.label.copyWith(
+                color: AppColors.textPrimaryLight,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            relative.name,
-                            style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (relative.nickname != null && relative.nickname!.isNotEmpty)
-                      Text('(${relative.nickname})', style: AppTextStyles.bodySmall.copyWith(color: Colors.grey)),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            relative.groupTypeDisplay,
-                            style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        if (relative.daysUntilBirthday != null) ...[
-                          const SizedBox(width: 8),
-                          Icon(Icons.cake, size: 14, color: AppColors.accentLight),
-                          const SizedBox(width: 4),
-                          Text(
-                            relative.birthdayText,
-                            style: TextStyle(fontSize: 12, color: AppColors.accentLight, fontWeight: FontWeight.w500),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (relative.nextEventTitle != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.event, size: 14, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              relative.nextEventTitle!,
-                              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$count người',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondaryLight,
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildShimmerLoading() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 5,
-      itemBuilder: (context, index) {
-        return Shimmer.fromColors(
-          baseColor: Colors.grey[300]!,
-          highlightColor: Colors.grey[100]!,
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+  Widget _buildRelativeCard(RelativeModel relative, int index) {
+    final Color groupColor = AppColors.groupTypeColors[relative.groupType] ?? AppColors.primaryLight;
+    final String initial = relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?';
+
+    String dateStr = '';
+    if (relative.dateOfBirth != null) {
+      dateStr = DateFormat('dd/MM').format(relative.dateOfBirth!);
+    }
+
+    return GestureDetector(
+      onTap: () => context.push('/relatives/${relative.id}'),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.textPrimaryLight.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: groupColor.withValues(alpha: 0.1),
+              backgroundImage: relative.avatarUrl != null ? NetworkImage(relative.avatarUrl!) : null,
+              child: relative.avatarUrl == null
+                  ? Text(
+                      initial,
+                      style: AppTextStyles.heading3.copyWith(color: groupColor),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    relative.displayName,
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: AppColors.textPrimaryLight,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: groupColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          relative.groupTypeDisplay,
+                          style: AppTextStyles.caption.copyWith(color: groupColor),
+                        ),
+                      ),
+                      if (dateStr.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        Icon(Icons.cake, size: 12, color: AppColors.textSecondaryLight),
+                        const SizedBox(width: 4),
+                        Text(
+                          dateStr,
+                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (relative.totalEvents != null && relative.totalEvents! > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.bgLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${relative.totalEvents}',
+                      style: AppTextStyles.label.copyWith(
+                        color: AppColors.accentLight,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'sự kiện',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 300.ms, delay: (index * 50).ms).slideX(begin: 0.1, end: 0),
     );
   }
 }

@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
-import '../../../providers/home_provider.dart';
-import '../../../providers/auth_provider.dart';
-import '../../../models/event.dart';
-import '../../../models/relative.dart';
-import '../../../core/utils/date_utils.dart'; // assuming exists, maybe not, let's omit if not sure
+import 'package:event_app/core/constants/app_colors.dart';
+import 'package:event_app/core/constants/app_text_styles.dart';
+import 'package:event_app/providers/home_provider.dart';
+import 'package:event_app/providers/auth_provider.dart';
+import 'package:event_app/models/event.dart';
+import 'package:event_app/models/relative.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +17,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedTab = 0;
+
   @override
   void initState() {
     super.initState();
@@ -31,80 +32,56 @@ class _HomeScreenState extends State<HomeScreen> {
     final homeProvider = context.watch<HomeProvider>();
     final user = context.read<AuthProvider>().user;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final homeData = homeProvider.homeData;
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () => context.read<HomeProvider>().refresh(),
-          child: homeProvider.isLoading && homeProvider.homeData == null
+          child: homeProvider.isLoading && homeData == null
               ? const Center(child: CircularProgressIndicator())
               : CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
                       child: _buildHeader(
                         context,
-                        homeProvider.homeData?.userName ?? user?.fullName ?? 'Khách',
-                        homeProvider.homeData?.avatarUrl ?? user?.avatarUrl,
+                        homeData?.userName ?? user?.fullName ?? 'Khách',
+                        homeData?.avatarUrl ?? user?.avatarUrl,
                         isDark,
                       ),
                     ),
-                    if (homeProvider.homeData?.upcomingEvents.isNotEmpty == true)
+                    if (homeData != null && homeData.googleCalendarConnected != true)
                       SliverToBoxAdapter(
-                        child: _buildSectionTitle('Sự kiện sắp tới', isDark),
+                        child: _buildGoogleCalendarBanner(isDark),
                       ),
-                    if (homeProvider.homeData?.upcomingEvents.isNotEmpty == true)
+                    if (homeData != null && homeData.upcomingEvents.isNotEmpty) ...[
                       SliverToBoxAdapter(
-                        child: _buildUpcomingEvents(
-                          context,
-                          homeProvider.homeData!.upcomingEvents,
-                          isDark,
-                        ),
+                        child: _buildUpcomingSectionHeader(isDark),
                       ),
-                    if (homeProvider.homeData?.relatives.isNotEmpty == true)
                       SliverToBoxAdapter(
-                        child: _buildSectionTitle('Người thân', isDark),
+                        child: _buildUpcomingEvents(homeData.upcomingEvents, isDark),
                       ),
-                    if (homeProvider.homeData?.relatives.isNotEmpty == true)
-                      SliverToBoxAdapter(
-                        child: _buildRelatives(
-                          context,
-                          homeProvider.homeData!.relatives,
-                          isDark,
-                        ),
-                      ),
-                    if (homeProvider.myEvents.isNotEmpty == true)
-                      SliverToBoxAdapter(
-                        child: _buildSectionTitle('Sự kiện của tôi', isDark),
-                      ),
-                    if (homeProvider.myEvents.isNotEmpty == true)
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              return _buildMyEventCard(
-                                context,
-                                homeProvider.myEvents[index],
-                                isDark,
-                                index,
-                              );
-                            },
-                            childCount: homeProvider.myEvents.length,
-                          ),
-                        ),
-                      ),
+                    ],
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 24),
+                    ),
+                    SliverToBoxAdapter(
+                      child: _buildTabs(isDark),
+                    ),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: 16),
+                    ),
+                    SliverToBoxAdapter(
+                      child: _selectedTab == 0
+                          ? _buildRelativesTab(homeData?.relatives ?? [], isDark)
+                          : _buildMyEventsTab(homeProvider.myEvents, isDark),
+                    ),
                     const SliverToBoxAdapter(child: SizedBox(height: 80)),
                   ],
                 ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/events/create'),
-        backgroundColor: AppColors.primaryLight,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text('Thêm sự kiện', style: AppTextStyles.button.copyWith(color: Colors.white)),
-      ).animate().scale(delay: 500.ms),
     );
   }
 
@@ -117,297 +94,501 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Xin chào,',
-                style: AppTextStyles.subtitle.copyWith(
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                ),
-              ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.2),
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 12,
+                    backgroundColor: AppColors.primaryLight,
+                    child: Icon(Icons.person, size: 16, color: Colors.white),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Xin chào, $userName 👋',
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 4),
               Text(
-                userName,
-                style: AppTextStyles.heading2.copyWith(
+                'Nhắc Sự Kiện',
+                style: AppTextStyles.heading1.copyWith(
                   color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                 ),
-              ).animate().fadeIn(duration: 400.ms, delay: 100.ms).slideX(begin: -0.2),
+              ),
             ],
           ),
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: AppColors.primaryLight.withOpacity(0.2),
-            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl == null
-                ? const Icon(Icons.person, color: AppColors.primaryLight)
-                : null,
-          ).animate().scale(duration: 400.ms),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.search, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                onPressed: () {},
+              ),
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.primaryLight.withValues(alpha: 0.2),
+                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                child: avatarUrl == null
+                    ? const Icon(Icons.person, color: AppColors.primaryLight)
+                    : null,
+              ),
+            ],
+          )
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-      child: Text(
-        title,
-        style: AppTextStyles.heading3.copyWith(
-          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-        ),
-      ).animate().fadeIn(duration: 400.ms).slideX(begin: -0.1),
-    );
-  }
-
-  Widget _buildUpcomingEvents(BuildContext context, List<EventModel> events, bool isDark) {
-    return SizedBox(
-      height: 180,
-      child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        scrollDirection: Axis.horizontal,
-        itemCount: events.length,
-        itemBuilder: (context, index) {
-          final event = events[index];
-          final color = AppColors.eventTypeColors[event.eventType] ?? AppColors.primaryLight;
-          
-          return Container(
-            width: 280,
-            margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.cardDark : AppColors.cardLight,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+  Widget _buildGoogleCalendarBanner(bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.calendar_month, color: AppColors.primaryLight, size: 32),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Kết nối Google Calendar',
+                  style: AppTextStyles.subtitle.copyWith(
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Đồng bộ sự kiện tự động',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
                 ),
               ],
             ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () => context.go('/events/${event.id}'),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(event.eventTypeIcon, color: color, size: 24),
-                          ),
-                          const Spacer(),
-                          if (event.daysUntilText.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: color,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                event.daysUntilText,
-                                style: AppTextStyles.caption.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Text(
-                        event.title,
-                        style: AppTextStyles.heading3.copyWith(
-                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondaryLight),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${event.eventDate.day}/${event.eventDate.month}/${event.eventDate.year}',
-                            style: AppTextStyles.bodySmall.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                            ),
-                          ),
-                          if (event.relativeName != null) ...[
-                            const SizedBox(width: 12),
-                            Icon(Icons.person, size: 14, color: AppColors.textSecondaryLight),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                event.relativeName!,
-                                style: AppTextStyles.bodySmall.copyWith(
-                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          ),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryLight,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              elevation: 0,
             ),
-          ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.2);
-        },
+            child: Text('Kết nối', style: AppTextStyles.label.copyWith(color: Colors.white)),
+          ),
+        ],
+      ),
+    ).animate().fadeIn().slideY(begin: -0.1);
+  }
+
+  Widget _buildUpcomingSectionHeader(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            '🔥 Sự kiện sắp tới',
+            style: AppTextStyles.heading2.copyWith(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
+          ),
+          GestureDetector(
+            onTap: () {},
+            child: Text(
+              'Xem tất cả >',
+              style: AppTextStyles.label.copyWith(color: AppColors.primaryLight),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildRelatives(BuildContext context, List<RelativeModel> relatives, bool isDark) {
+  Widget _buildUpcomingEvents(List<EventModel> events, bool isDark) {
     return SizedBox(
-      height: 100,
+      height: 160,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
-        itemCount: relatives.length,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: events.length,
         itemBuilder: (context, index) {
-          final relative = relatives[index];
-          final color = AppColors.groupTypeColors[relative.groupType] ?? AppColors.primaryLight;
+          final event = events[index];
+          final baseColor = AppColors.eventTypeColors[event.eventType] ?? AppColors.primaryLight;
+          final gradient = LinearGradient(
+            colors: [baseColor, baseColor.withValues(alpha: 0.7)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
           
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: GestureDetector(
-              onTap: () => context.go('/relatives/${relative.id}'),
-              child: Column(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: color, width: 2),
-                      image: relative.avatarUrl != null
-                          ? DecorationImage(
-                              image: NetworkImage(relative.avatarUrl!),
-                              fit: BoxFit.cover,
-                            )
-                          : null,
-                      color: isDark ? AppColors.cardDark : AppColors.cardLight,
-                    ),
-                    child: relative.avatarUrl == null
-                        ? Icon(Icons.person, color: color, size: 32)
-                        : null,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    relative.nickname ?? relative.name.split(' ').last,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          return GestureDetector(
+            onTap: () => context.go('/events/${event.id}'),
+            child: Container(
+              width: 140,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+              decoration: BoxDecoration(
+                gradient: gradient,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: baseColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
-            ).animate().fadeIn(delay: (200 + index * 50).ms).scale(),
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          event.daysUntilText.isEmpty ? 'Sắp tới' : event.daysUntilText,
+                          style: AppTextStyles.caption.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Icon(event.eventTypeIcon, color: Colors.white, size: 20),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    event.title,
+                    style: AppTextStyles.subtitle.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  if (event.relativeName != null)
+                    Text(
+                      event.relativeName!,
+                      style: AppTextStyles.bodySmall.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                ],
+              ),
+            ).animate().fadeIn(delay: (index * 100).ms).slideX(begin: 0.1),
           );
         },
       ),
     );
   }
 
-  Widget _buildMyEventCard(BuildContext context, EventModel event, bool isDark, int index) {
-    final color = AppColors.eventTypeColors[event.eventType] ?? AppColors.primaryLight;
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildTabs(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          _buildTabItem('Người thân', 0, isDark),
+          const SizedBox(width: 24),
+          _buildTabItem('Sự kiện của tôi', 1, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabItem(String title, int index, bool isDark) {
+    final isSelected = _selectedTab == index;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedTab = index),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.subtitle.copyWith(
+              color: isSelected
+                  ? (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)
+                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            height: 3,
+            width: 32,
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primaryLight : Colors.transparent,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              Container(width: 6, color: color),
-              Expanded(
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => context.go('/events/${event.id}'),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
+    );
+  }
+
+  Widget _buildRelativesTab(List<RelativeModel> relatives, bool isDark) {
+    return Column(
+      children: [
+        if (relatives.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'Chưa có người thân nào',
+              style: AppTextStyles.body.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+          )
+        else
+          ...relatives.map((rel) {
+            final color = AppColors.groupTypeColors[rel.groupType] ?? AppColors.primaryLight;
+            return GestureDetector(
+              onTap: () => context.go('/relatives/${rel.id}'),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: color.withValues(alpha: 0.2),
+                      backgroundImage: rel.avatarUrl != null ? NetworkImage(rel.avatarUrl!) : null,
+                      child: rel.avatarUrl == null ? Icon(Icons.person, color: color) : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: color.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(event.eventTypeIcon, color: color),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  event.title,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  rel.displayName,
                                   style: AppTextStyles.subtitle.copyWith(
                                     color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                                     fontWeight: FontWeight.bold,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  rel.groupTypeDisplay,
+                                  style: AppTextStyles.caption.copyWith(color: color),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            rel.birthdayText,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (rel.daysUntilBirthday != null && rel.daysUntilBirthday! >= 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.primaryLight.withValues(alpha: 0.1),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              rel.daysUntilBirthday.toString(),
+                              style: AppTextStyles.subtitle.copyWith(
+                                color: AppColors.primaryLight,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'ngày',
+                              style: AppTextStyles.caption.copyWith(
+                                color: AppColors.primaryLight,
+                                fontSize: 8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ).animate().fadeIn().slideY(begin: 0.1),
+            );
+          }),
+        const SizedBox(height: 16),
+        TextButton.icon(
+          onPressed: () => context.go('/relatives/create'),
+          icon: const Icon(Icons.add, color: AppColors.primaryLight),
+          label: Text('Thêm người thân', style: AppTextStyles.button.copyWith(color: AppColors.primaryLight)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMyEventsTab(List<EventModel> events, bool isDark) {
+    return Column(
+      children: [
+        if (events.isEmpty)
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'Chưa có sự kiện nào',
+              style: AppTextStyles.body.copyWith(
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+          )
+        else
+          ...events.map((event) {
+            final color = AppColors.eventTypeColors[event.eventType] ?? AppColors.primaryLight;
+            return GestureDetector(
+              onTap: () => context.go('/events/${event.id}'),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: color.withValues(alpha: 0.1),
+                      ),
+                      child: Icon(event.eventTypeIcon, color: color),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.title,
+                            style: AppTextStyles.subtitle.copyWith(
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  event.eventTypeDisplay,
+                                  style: AppTextStyles.caption.copyWith(color: color),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
                                   '${event.eventDate.day}/${event.eventDate.month}/${event.eventDate.year}',
                                   style: AppTextStyles.bodySmall.copyWith(
                                     color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                          if (event.daysUntilText.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: color.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                event.daysUntilText,
-                                style: AppTextStyles.caption.copyWith(
-                                  color: color,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
                         ],
                       ),
                     ),
-                  ),
+                    if (event.daysUntil != null && event.daysUntil! >= 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: color.withValues(alpha: 0.1),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              event.daysUntil.toString(),
+                              style: AppTextStyles.subtitle.copyWith(
+                                color: color,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'ngày',
+                              style: AppTextStyles.caption.copyWith(
+                                color: color,
+                                fontSize: 8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ),
-            ],
-          ),
+              ).animate().fadeIn().slideY(begin: 0.1),
+            );
+          }),
+        const SizedBox(height: 16),
+        TextButton.icon(
+          onPressed: () => context.go('/events/create'),
+          icon: const Icon(Icons.add, color: AppColors.primaryLight),
+          label: Text('Thêm sự kiện', style: AppTextStyles.button.copyWith(color: AppColors.primaryLight)),
         ),
-      ),
-    ).animate().fadeIn(delay: (300 + index * 50).ms).slideY(begin: 0.1);
+      ],
+    );
   }
 }
