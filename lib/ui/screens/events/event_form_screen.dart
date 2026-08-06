@@ -1,92 +1,113 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
-import 'package:event_app/core/utils/date_utils.dart';
 import 'package:event_app/providers/event_provider.dart';
 import 'package:event_app/providers/relative_provider.dart';
 import 'package:event_app/models/event.dart';
+import 'package:event_app/core/utils/date_utils.dart';
 
 class EventFormScreen extends StatefulWidget {
+  final bool isRelativeEvent;
   final int? eventId;
 
-  const EventFormScreen({super.key, this.eventId});
+  const EventFormScreen({
+    super.key,
+    this.isRelativeEvent = true,
+    this.eventId,
+  });
 
   @override
   State<EventFormScreen> createState() => _EventFormScreenState();
 }
 
 class _EventFormScreenState extends State<EventFormScreen> {
-  final _formKey = GlobalKey<FormState>();
-  bool _isLoading = false;
-  bool _isInit = true;
-
-  late TextEditingController _titleController;
-  late TextEditingController _notesController;
+  final _titleController = TextEditingController();
+  final _notesController = TextEditingController();
   
-  String _selectedEventType = 'KHAC';
-  DateTime _selectedDate = DateTime.now();
+  String _selectedEventType = 'SINH_NHAT';
   int? _selectedRelativeId;
+  DateTime _selectedDate = DateTime.now();
+  TimeOfDay? _selectedTime;
   bool _isRecurring = false;
-  String _recurrenceType = 'YEARLY';
-  
-  List<ReminderModel> _reminders = [];
 
-  final List<String> _eventTypes = [
-    'SINH_NHAT', 'KY_NIEM', 'LE', 'NHA_O', 'HOA_DON', 'MUA_SAM', 'KHAC'
-  ];
+  bool _remind7Days = true;
+  bool _remind3Days = true;
+  bool _remind1Day = true;
+  bool _remind1Hour = false;
+
+  List<String> get _eventTypes {
+    if (widget.isRelativeEvent) {
+      return ['SINH_NHAT', 'KY_NIEM', 'LE', 'KHAC'];
+    } else {
+      return ['HOA_DON', 'NHA_O', 'MUA_SAM', 'KHAC'];
+    }
+  }
+  
+  String _getEventTypeName(String type) {
+    const map = {
+      'SINH_NHAT': 'Sinh nhật',
+      'KY_NIEM': 'Kỷ niệm',
+      'LE': 'Ngày giỗ',
+      'HOA_DON': 'Đóng tiền điện',
+      'NHA_O': 'Đóng tiền phòng',
+      'MUA_SAM': 'Mua sắm',
+      'KHAC': 'Khác',
+    };
+    return map[type] ?? type;
+  }
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController();
-    _notesController = TextEditingController();
-    
-    // Default reminder
-    _reminders.add(const ReminderModel(remindDaysBefore: 1));
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_isInit) {
-      _isInit = false;
-      context.read<RelativeProvider>().loadRelatives();
-      if (widget.eventId != null) {
-        _loadEventData();
-      }
+    if (!widget.isRelativeEvent) {
+      _selectedEventType = 'HOA_DON';
     }
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.isRelativeEvent) {
+        context.read<RelativeProvider>().loadRelatives();
+      }
+      
+      if (widget.eventId != null) {
+        _loadExistingEvent();
+      }
+    });
   }
 
-  Future<void> _loadEventData() async {
-    setState(() => _isLoading = true);
-    try {
-      await context.read<EventProvider>().loadEventById(widget.eventId!);
-      final event = context.read<EventProvider>().selectedEvent;
-      if (event != null) {
+  Future<void> _loadExistingEvent() async {
+    final provider = context.read<EventProvider>();
+    await provider.loadEventById(widget.eventId!);
+    final event = provider.selectedEvent;
+    if (event != null) {
+      setState(() {
         _titleController.text = event.title;
         _notesController.text = event.notes ?? '';
         _selectedEventType = event.eventType;
-        _selectedDate = event.eventDate;
         _selectedRelativeId = event.relativeId;
+        _selectedDate = event.eventDate;
+        if (event.eventTime != null && event.eventTime!.isNotEmpty) {
+          final parts = event.eventTime!.split(':');
+          _selectedTime = TimeOfDay(
+            hour: int.tryParse(parts[0]) ?? 0,
+            minute: int.tryParse(parts[1]) ?? 0,
+          );
+        }
         _isRecurring = event.isRecurring;
-        if (event.recurrenceType != null) {
-          _recurrenceType = event.recurrenceType!;
+        
+        _remind7Days = false;
+        _remind3Days = false;
+        _remind1Day = false;
+        _remind1Hour = false;
+        
+        for (var r in event.reminders) {
+          if (r.remindDaysBefore == 7) _remind7Days = r.isEnabled;
+          if (r.remindDaysBefore == 3) _remind3Days = r.isEnabled;
+          if (r.remindDaysBefore == 1) _remind1Day = r.isEnabled;
+          if (r.remindHoursBefore == 1) _remind1Hour = r.isEnabled;
         }
-        if (event.reminders.isNotEmpty) {
-          _reminders = List.from(event.reminders);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      });
     }
   }
 
@@ -97,266 +118,416 @@ class _EventFormScreenState extends State<EventFormScreen> {
     super.dispose();
   }
 
-  Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
-    
-    setState(() => _isLoading = true);
-    
-    try {
-      final data = {
-        'title': _titleController.text.trim(),
-        'eventType': _selectedEventType,
-        'eventDate': _selectedDate.toIso8601String().split('T').first,
-        'isRecurring': _isRecurring,
-        'recurrenceType': _isRecurring ? _recurrenceType : null,
-        'relativeId': _selectedRelativeId,
-        'notes': _notesController.text.trim(),
-        'reminders': _reminders.map((r) => r.toJson()).toList(),
-      };
-
-      if (widget.eventId == null) {
-        await context.read<EventProvider>().createEvent(data);
-      } else {
-        await context.read<EventProvider>().updateEvent(widget.eventId!, data);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.eventId == null ? 'Đã tạo sự kiện' : 'Đã cập nhật sự kiện')),
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryLight,
+            ),
+          ),
+          child: child!,
         );
-        context.pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppColors.primaryLight,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedTime = picked;
+      });
+    }
+  }
+
+  void _saveEvent() {
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng nhập tiêu đề sự kiện')),
+      );
+      return;
+    }
+    
+    if (widget.isRelativeEvent && _selectedRelativeId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn người thân')),
+      );
+      return;
+    }
+
+    final reminders = <Map<String, dynamic>>[];
+    if (_remind7Days) reminders.add({'remindDaysBefore': 7, 'isEnabled': true});
+    if (_remind3Days) reminders.add({'remindDaysBefore': 3, 'isEnabled': true});
+    if (_remind1Day) reminders.add({'remindDaysBefore': 1, 'isEnabled': true});
+    if (_remind1Hour) reminders.add({'remindHoursBefore': 1, 'isEnabled': true});
+
+    final data = {
+      'title': _titleController.text.trim(),
+      'eventType': _selectedEventType,
+      'eventDate': _selectedDate.toIso8601String().split('T').first,
+      'eventTime': _selectedTime != null 
+          ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
+          : null,
+      'isRecurring': _isRecurring,
+      'notes': _notesController.text.trim(),
+      'relativeId': _selectedRelativeId,
+      'reminders': reminders,
+    };
+
+    final provider = context.read<EventProvider>();
+    if (widget.eventId != null) {
+      provider.updateEvent(widget.eventId!, data).then((success) {
+        if (success) Navigator.pop(context);
+      });
+    } else {
+      provider.createEvent(data).then((success) {
+        if (success) Navigator.pop(context);
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final relatives = context.watch<RelativeProvider>().relatives;
-
     return Scaffold(
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
-        title: Text(widget.eventId == null ? 'Tạo sự kiện mới' : 'Chỉnh sửa sự kiện'),
+        backgroundColor: AppColors.surfaceLight,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimaryLight),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          widget.isRelativeEvent ? 'Sự kiện Người thân' : 'Sự kiện Bản thân',
+          style: AppTextStyles.heading2.copyWith(color: AppColors.textPrimaryLight),
+        ),
+        centerTitle: true,
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : Stack(
-            children: [
-              SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.isRelativeEvent) ...[
+              Text('Chọn người thân', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+              const SizedBox(height: 12),
+              _buildRelativeChips(),
+              const SizedBox(height: 24),
+            ],
+
+            Text('Tiêu đề sự kiện', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primaryLight),
+                ),
+              ),
+              style: AppTextStyles.body,
+            ),
+            const SizedBox(height: 24),
+
+            Text('Loại sự kiện', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+            const SizedBox(height: 12),
+            _buildEventTypeChips(),
+            const SizedBox(height: 24),
+
+            Row(
+              children: [
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextFormField(
-                        controller: _titleController,
-                        decoration: const InputDecoration(
-                          labelText: 'Tên sự kiện',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLength: 200,
-                        validator: (value) => value == null || value.isEmpty ? 'Vui lòng nhập tên sự kiện' : null,
-                      ).animate().fadeIn().slideY(),
-                      const SizedBox(height: 16),
-                      
-                      Text('Loại sự kiện', style: AppTextStyles.heading3),
+                      Text('Ngày (yyyy-MM-dd)', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
                       const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        children: _eventTypes.map((type) {
-                          return ChoiceChip(
-                            label: Text(type),
-                            selected: _selectedEventType == type,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() => _selectedEventType = type);
-                              }
-                            },
-                          );
-                        }).toList(),
-                      ).animate().fadeIn(delay: 100.ms).slideY(),
-                      const SizedBox(height: 24),
-                      
-                      ListTile(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-                        ),
-                        leading: Icon(Icons.calendar_today, color: AppColors.primaryLight),
-                        title: const Text('Ngày diễn ra'),
-                        subtitle: Text(AppDateUtils.formatDate(_selectedDate)),
-                        onTap: () async {
-                          final date = await showDatePicker(
-                            context: context,
-                            initialDate: _selectedDate,
-                            firstDate: DateTime(1900),
-                            lastDate: DateTime(2100),
-                          );
-                          if (date != null) {
-                            setState(() => _selectedDate = date);
-                          }
-                        },
-                      ).animate().fadeIn(delay: 200.ms).slideY(),
-                      const SizedBox(height: 16),
-                      
-                      if (relatives.isNotEmpty)
-                        DropdownButtonFormField<int>(
-                          value: _selectedRelativeId,
-                          decoration: const InputDecoration(
-                            labelText: 'Người liên quan (Tuỳ chọn)',
-                            border: OutlineInputBorder(),
+                      GestureDetector(
+                        onTap: _selectDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
                           ),
-                          items: [
-                            const DropdownMenuItem<int>(value: null, child: Text('Không có')),
-                            ...relatives.map((r) => DropdownMenuItem<int>(
-                              value: r.id,
-                              child: Text(r.name),
-                            )),
-                          ],
-                          onChanged: (val) => setState(() => _selectedRelativeId = val),
-                        ).animate().fadeIn(delay: 300.ms).slideY(),
-                      const SizedBox(height: 16),
-
-                      SwitchListTile(
-                        title: const Text('Lặp lại định kỳ'),
-                        value: _isRecurring,
-                        onChanged: (val) => setState(() => _isRecurring = val),
-                      ).animate().fadeIn(delay: 400.ms).slideY(),
-                      
-                      if (_isRecurring)
-                        DropdownButtonFormField<String>(
-                          value: _recurrenceType,
-                          decoration: const InputDecoration(
-                            labelText: 'Chu kỳ lặp',
-                            border: OutlineInputBorder(),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                AppDateUtils.formatDate(_selectedDate),
+                                style: AppTextStyles.body,
+                              ),
+                              const Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.primaryLight),
+                            ],
                           ),
-                          items: const [
-                            DropdownMenuItem(value: 'YEARLY', child: Text('Hàng năm')),
-                            DropdownMenuItem(value: 'MONTHLY', child: Text('Hàng tháng')),
-                            DropdownMenuItem(value: 'WEEKLY', child: Text('Hàng tuần')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() => _recurrenceType = val);
-                            }
-                          },
-                        ).animate().fadeIn(delay: 450.ms).slideY(),
-                      const SizedBox(height: 16),
-
-                      Text('Lời nhắc', style: AppTextStyles.heading3),
-                      ..._reminders.asMap().entries.map((entry) {
-                        final idx = entry.key;
-                        final reminder = entry.value;
-                        final isDays = reminder.remindDaysBefore != null;
-                        final val = isDays ? reminder.remindDaysBefore : reminder.remindHoursBefore ?? 1;
-                        final unit = isDays ? 'DAYS' : 'HOURS';
-
-                        return Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                initialValue: val.toString(),
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: 'Trước (số lượng)'),
-                                onChanged: (newVal) {
-                                  final parsed = int.tryParse(newVal) ?? 1;
-                                  setState(() {
-                                    _reminders[idx] = ReminderModel(
-                                      remindDaysBefore: unit == 'DAYS' ? parsed : null,
-                                      remindHoursBefore: unit == 'HOURS' ? parsed : null,
-                                    );
-                                  });
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: unit,
-                                items: const [
-                                  DropdownMenuItem(value: 'MINUTES', child: Text('Phút')),
-                                  DropdownMenuItem(value: 'HOURS', child: Text('Giờ')),
-                                  DropdownMenuItem(value: 'DAYS', child: Text('Ngày')),
-                                ],
-                                onChanged: (newUnit) {
-                                  if (newUnit != null) {
-                                    setState(() {
-                                      _reminders[idx] = ReminderModel(
-                                        remindDaysBefore: newUnit == 'DAYS' ? val : null,
-                                        remindHoursBefore: newUnit == 'HOURS' ? val : null,
-                                      );
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle, color: Colors.red),
-                              onPressed: () {
-                                setState(() => _reminders.removeAt(idx));
-                              },
-                            )
-                          ],
-                        );
-                      }),
-                      TextButton.icon(
-                        icon: const Icon(Icons.add),
-                        label: const Text('Thêm lời nhắc'),
-                        onPressed: () {
-                          setState(() => _reminders.add(const ReminderModel(remindDaysBefore: 1)));
-                        },
-                      ).animate().fadeIn(delay: 500.ms).slideY(),
-                      
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _notesController,
-                        decoration: const InputDecoration(
-                          labelText: 'Ghi chú',
-                          border: OutlineInputBorder(),
                         ),
-                        maxLines: 4,
-                        maxLength: 2000,
-                      ).animate().fadeIn(delay: 600.ms).slideY(),
-                      const SizedBox(height: 100), // spacing for bottom button
+                      ),
                     ],
                   ),
                 ),
-              ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 16,
-                child: Container(
-                  width: double.infinity,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [AppColors.primaryLight, AppColors.secondaryLight]),
-                    borderRadius: BorderRadius.circular(28),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Giờ (HH:mm)', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: _selectTime,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceLight,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _selectedTime != null 
+                                    ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
+                                    : 'Chọn giờ',
+                                style: AppTextStyles.body.copyWith(
+                                  color: _selectedTime != null ? AppColors.textPrimaryLight : AppColors.textSecondaryLight,
+                                ),
+                              ),
+                              const Icon(Icons.access_time_rounded, size: 20, color: AppColors.primaryLight),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: ElevatedButton(
-                    onPressed: _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                    ),
-                    child: Text(
-                      'Lưu sự kiện',
-                      style: AppTextStyles.heading3.copyWith(color: Colors.white),
-                    ),
-                  ),
-                ).animate().slideY(begin: 1, delay: 700.ms),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Lặp lại', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+                Switch(
+                  value: _isRecurring,
+                  onChanged: (v) => setState(() => _isRecurring = v),
+                  activeColor: AppColors.primaryLight,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            Text('Nhắc nhở', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE0E0E0)),
               ),
-            ],
+              child: Column(
+                children: [
+                  _buildReminderToggle('7 ngày trước', _remind7Days, (v) => setState(() => _remind7Days = v)),
+                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                  _buildReminderToggle('3 ngày trước', _remind3Days, (v) => setState(() => _remind3Days = v)),
+                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                  _buildReminderToggle('1 ngày trước', _remind1Day, (v) => setState(() => _remind1Day = v)),
+                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                  _buildReminderToggle('1 giờ trước', _remind1Hour, (v) => setState(() => _remind1Hour = v)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            Text('Ghi chú (tùy chọn)', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _notesController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppColors.surfaceLight,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.primaryLight),
+                ),
+              ),
+              style: AppTextStyles.body,
+            ),
+            const SizedBox(height: 40),
+
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: AppColors.accentGradient,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ElevatedButton(
+                  onPressed: context.watch<EventProvider>().isLoading ? null : _saveEvent,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: context.watch<EventProvider>().isLoading
+                      ? const SizedBox(
+                          width: 24, height: 24,
+                          child: CircularProgressIndicator(color: AppColors.surfaceLight, strokeWidth: 2),
+                        )
+                      : Text(
+                          'Lưu sự kiện',
+                          style: AppTextStyles.button.copyWith(color: AppColors.surfaceLight),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 40),
+          ].animate(interval: 50.ms).fade(duration: 300.ms).slideY(begin: 0.1, end: 0, duration: 300.ms),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRelativeChips() {
+    final provider = context.watch<RelativeProvider>();
+    final relatives = provider.relatives;
+    
+    if (relatives.isEmpty) {
+      return Text('Chưa có người thân nào', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight));
+    }
+    
+    return SizedBox(
+      height: 40,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: relatives.length,
+        itemBuilder: (context, index) {
+          final relative = relatives[index];
+          final isSelected = _selectedRelativeId == relative.id;
+          
+          return GestureDetector(
+            onTap: () => setState(() => _selectedRelativeId = relative.id),
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primaryLight : AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                relative.displayName,
+                style: AppTextStyles.label.copyWith(
+                  color: isSelected ? AppColors.surfaceLight : AppColors.textSecondaryLight,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEventTypeChips() {
+    return SizedBox(
+      height: 40,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _eventTypes.length,
+        itemBuilder: (context, index) {
+          final type = _eventTypes[index];
+          final isSelected = _selectedEventType == type;
+          
+          return GestureDetector(
+            onTap: () => setState(() => _selectedEventType = type),
+            child: Container(
+              margin: const EdgeInsets.only(right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primaryLight : AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                _getEventTypeName(type),
+                style: AppTextStyles.label.copyWith(
+                  color: isSelected ? AppColors.surfaceLight : AppColors.textSecondaryLight,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildReminderToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryLight)),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: AppColors.primaryLight,
           ),
+        ],
+      ),
     );
   }
 }

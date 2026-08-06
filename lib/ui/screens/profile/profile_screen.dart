@@ -1,449 +1,391 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
+import 'package:provider/provider.dart';
 import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/auth_provider.dart';
 import 'package:event_app/providers/notification_provider.dart';
 import 'package:event_app/core/theme/theme_provider.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthProvider>().loadProfile();
-      context.read<NotificationProvider>().loadUnreadCount();
-    });
-  }
-
-  void _confirmLogout(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Đăng xuất', style: AppTextStyles.heading3),
-        content: Text('Bạn có chắc muốn đăng xuất khỏi tài khoản?', style: AppTextStyles.body),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Huỷ',
-              style: AppTextStyles.button.copyWith(color: AppColors.textSecondaryLight),
-            ),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await context.read<AuthProvider>().logout();
-              if (context.mounted) {
-                context.go('/login');
-              }
-            },
-            child: Text(
-              'Đăng xuất',
-              style: AppTextStyles.button.copyWith(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
-    final themeProvider = context.watch<ThemeProvider>();
-    final unreadCount = context.watch<NotificationProvider>().unreadCount;
     final user = authProvider.user;
+    final themeProvider = context.watch<ThemeProvider>();
     final isDark = themeProvider.isDarkMode;
-
-    int daysActive = 0;
-    if (user?.createdAt != null) {
-      daysActive = DateTime.now().difference(user!.createdAt!).inDays;
-    }
+    
+    final days = user?.createdAt != null 
+        ? DateTime.now().difference(user!.createdAt!).inDays 
+        : 0;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await context.read<AuthProvider>().loadProfile();
-          if (context.mounted) {
-            await context.read<NotificationProvider>().loadUnreadCount();
-          }
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header Segment
-              Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.bottomCenter,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 60),
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.only(top: 80, bottom: 40),
-                      decoration: BoxDecoration(
-                        gradient: AppColors.accentGradient,
-                        borderRadius: BorderRadius.vertical(
-                          bottom: Radius.elliptical(MediaQuery.of(context).size.width, 50),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 3),
-                            ),
-                            child: CircleAvatar(
-                              radius: 40,
-                              backgroundColor: Colors.white.withValues(alpha: 0.2),
-                              backgroundImage: user?.avatarUrl != null ? NetworkImage(user!.avatarUrl!) : null,
-                              child: user?.avatarUrl == null
-                                  ? Text(
-                                      (user?.fullName.isNotEmpty == true) ? user!.fullName[0].toUpperCase() : '?',
-                                      style: AppTextStyles.heading1.copyWith(color: Colors.white),
-                                    )
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            user?.fullName ?? 'Đang tải...',
-                            style: AppTextStyles.heading2.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            user?.email ?? '',
-                            style: AppTextStyles.body.copyWith(color: Colors.white.withValues(alpha: 0.9)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  // Overlapping Stats
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildStatCircle('Sự kiện', '${user?.totalEvents ?? 0}', AppColors.tealGradient, isDark),
-                        _buildStatCircle('Người thân', '${user?.totalRelatives ?? 0}', AppColors.tealGradient, isDark),
-                        _buildStatCircle('Ngày HL', '$daysActive', AppColors.tealGradient, isDark),
-                      ],
-                    ),
-                  ),
-                ],
-              ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.1),
-
-              const SizedBox(height: 32),
-              
-              // Google Calendar Card
-              _buildGoogleCalendarCard(context, isDark).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
-
-              const SizedBox(height: 24),
-              
-              // Tài Khoản Section
-              _buildSectionTitle('TÀI KHOẢN', isDark).animate().fadeIn(delay: 300.ms),
-              _buildAccountMenu(context, isDark, unreadCount).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1),
-
-              const SizedBox(height: 24),
-
-              // Cài Đặt Section
-              _buildSectionTitle('CÀI ĐẶT', isDark).animate().fadeIn(delay: 400.ms),
-              _buildSettingsMenu(context, isDark).animate().fadeIn(delay: 450.ms).slideY(begin: 0.1),
-
-              const SizedBox(height: 32),
-
-              // Logout Button
-              Center(
-                child: TextButton(
-                  onPressed: () => _confirmLogout(context),
-                  child: Text(
-                    'Đăng xuất',
-                    style: AppTextStyles.button.copyWith(color: AppColors.error),
-                  ),
-                ),
-              ).animate().fadeIn(delay: 500.ms),
-
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCircle(String label, String value, LinearGradient gradient, bool isDark) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 70,
-          height: 70,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: gradient,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: gradient.colors.first.withValues(alpha: 0.3),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            value,
-            style: AppTextStyles.heading3.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGoogleCalendarCard(BuildContext context, bool isDark) {
-    return GestureDetector(
-      onTap: () {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text('Tính năng đang phát triển', style: AppTextStyles.heading3),
-            content: Text('Tính năng kết nối Google Calendar sẽ sớm ra mắt.', style: AppTextStyles.body),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text('Đóng', style: AppTextStyles.button.copyWith(color: AppColors.primaryLight)),
-              ),
-            ],
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isDark ? Colors.transparent : Colors.grey.withValues(alpha: 0.15)),
-          boxShadow: isDark
-              ? null
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-        ),
-        child: Row(
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header
             Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
+              height: 220,
+              decoration: const BoxDecoration(
+                gradient: AppColors.headerGradient,
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(32),
+                  bottomRight: Radius.circular(32),
+                ),
               ),
-              child: const Icon(Icons.calendar_month_rounded, color: Colors.blue, size: 24),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Google Calendar',
-                    style: AppTextStyles.subtitle.copyWith(
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.notifications_none,
+                        color: Colors.white,
+                        size: 32,
+                      ),
                     ),
+                    const SizedBox(height: 12),
+                    Text(
+                      user?.fullName ?? 'Người dùng',
+                      style: AppTextStyles.heading2.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user?.email ?? 'email@example.com',
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Stats Row
+            Transform.translate(
+              offset: const Offset(0, -24),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                  child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                      Expanded(
+                        child: _buildStatItem(
+                          '${user?.totalEvents ?? 0}', 
+                          'Sự kiện', 
+                          isDark,
                         ),
-                        child: Text(
-                          'Chưa kết nối',
-                          style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                      Expanded(
+                        child: _buildStatItem(
+                          '${user?.totalRelatives ?? 0}', 
+                          'Người thân', 
+                          isDark,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: isDark ? Colors.white24 : Colors.black12,
+                      ),
+                      Expanded(
+                        child: _buildStatItem(
+                          '$days', 
+                          'Ngày', 
+                          isDark,
                         ),
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tài khoản',
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingsRow(
+                          icon: Icons.person_outline,
+                          iconBg: AppColors.iconBgPink,
+                          iconColor: AppColors.primaryLight,
+                          title: 'Thông tin cá nhân',
+                          isDark: isDark,
+                          onTap: () => context.push('/profile/settings'),
+                        ),
+                        Divider(height: 1, color: isDark ? Colors.white12 : Colors.black12),
+                        Consumer<NotificationProvider>(
+                          builder: (context, notificationProvider, child) {
+                            return _buildSettingsRow(
+                              icon: Icons.notifications_none,
+                              iconBg: AppColors.iconBgPink,
+                              iconColor: AppColors.primaryLight,
+                              title: 'Thông báo',
+                              isDark: isDark,
+                              badgeCount: notificationProvider.unreadCount,
+                              onTap: () => context.push('/profile/notifications'),
+                            );
+                          }
+                        ),
+                        Divider(height: 1, color: isDark ? Colors.white12 : Colors.black12),
+                        _buildSettingsRow(
+                          icon: Icons.language,
+                          iconBg: AppColors.iconBgPink,
+                          iconColor: AppColors.primaryLight,
+                          title: 'Ngôn ngữ',
+                          trailingText: 'Tiếng Việt',
+                          isDark: isDark,
+                          onTap: () {},
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  Text(
+                    'Cài đặt',
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingsRow(
+                          icon: Icons.dark_mode_outlined,
+                          iconBg: const Color(0xFFE3F2FD),
+                          iconColor: Colors.blue,
+                          title: 'Chế độ tối',
+                          isDark: isDark,
+                          trailingWidget: Switch(
+                            value: isDark,
+                            onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
+                            activeColor: AppColors.primaryLight,
+                          ),
+                          onTap: () => context.read<ThemeProvider>().toggleTheme(),
+                        ),
+                        Divider(height: 1, color: isDark ? Colors.white12 : Colors.black12),
+                        _buildSettingsRow(
+                          icon: Icons.security,
+                          iconBg: AppColors.iconBgPink,
+                          iconColor: AppColors.primaryLight,
+                          title: 'Bảo mật',
+                          isDark: isDark,
+                          onTap: () => context.push('/profile/login-history'),
+                        ),
+                        Divider(height: 1, color: isDark ? Colors.white12 : Colors.black12),
+                        _buildSettingsRow(
+                          icon: Icons.help_outline,
+                          iconBg: AppColors.iconBgPink,
+                          iconColor: AppColors.primaryLight,
+                          title: 'Trợ giúp',
+                          isDark: isDark,
+                          onTap: () {
+                            showAboutDialog(
+                              context: context,
+                              applicationName: 'Event App',
+                              applicationVersion: '1.0.0',
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 32),
+                  
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        await context.read<AuthProvider>().logout();
+                        if (context.mounted) {
+                          context.go('/splash');
+                        }
+                      },
+                      icon: const Icon(Icons.logout, color: AppColors.primaryLight),
+                      label: Text(
+                        'Đăng xuất',
+                        style: AppTextStyles.button.copyWith(color: AppColors.primaryLight),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(
+                          color: AppColors.primaryLight,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Text(
-        title,
-        style: AppTextStyles.label.copyWith(
-          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMenuCard({required List<Widget> children, required bool isDark}) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.transparent : Colors.grey.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        children: children,
-      ),
-    );
-  }
-
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    Widget? trailing,
-    VoidCallback? onTap,
-    required bool isDark,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
-      title: Text(
-        title,
-        style: AppTextStyles.body.copyWith(
-          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      trailing: trailing ??
-          Icon(Icons.chevron_right, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-      onTap: onTap,
-    );
-  }
-
-  Widget _buildAccountMenu(BuildContext context, bool isDark, int unreadCount) {
-    return _buildMenuCard(
-      isDark: isDark,
+  Widget _buildStatItem(String value, String label, bool isDark) {
+    return Column(
       children: [
-        _buildMenuItem(
-          icon: Icons.person_outline,
-          title: 'Thông tin cá nhân',
-          isDark: isDark,
-          onTap: () => context.push('/profile/settings'),
-        ),
-        const Divider(height: 1, indent: 56),
-        _buildMenuItem(
-          icon: Icons.notifications_none,
-          title: 'Thông báo',
-          isDark: isDark,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (unreadCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: const BoxDecoration(color: AppColors.error, shape: BoxShape.circle),
-                  child: Text('$unreadCount', style: AppTextStyles.caption.copyWith(color: Colors.white)),
-                ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-            ],
+        Text(
+          value,
+          style: AppTextStyles.heading2.copyWith(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            fontWeight: FontWeight.bold,
           ),
-          onTap: () => context.push('/profile/notifications'),
         ),
-        const Divider(height: 1, indent: 56),
-        _buildMenuItem(
-          icon: Icons.language,
-          title: 'Ngôn ngữ',
-          isDark: isDark,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: AppTextStyles.bodySmall.copyWith(
+            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsRow({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String title,
+    required bool isDark,
+    String? trailingText,
+    Widget? trailingWidget,
+    int badgeCount = 0,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: iconBg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTextStyles.body.copyWith(
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            if (badgeCount > 0)
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: const BoxDecoration(
+                  color: AppColors.error,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  badgeCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            if (trailingText != null) ...[
+              const SizedBox(width: 8),
               Text(
-                'Tiếng Việt',
+                trailingText,
                 style: AppTextStyles.bodySmall.copyWith(
                   color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                 ),
               ),
-              const SizedBox(width: 4),
-              Icon(Icons.chevron_right, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
             ],
-          ),
-          onTap: () => context.push('/profile/settings'),
+            if (trailingWidget != null) ...[
+              const SizedBox(width: 8),
+              trailingWidget,
+            ] else ...[
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                size: 20,
+              ),
+            ],
+          ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsMenu(BuildContext context, bool isDark) {
-    return _buildMenuCard(
-      isDark: isDark,
-      children: [
-        _buildMenuItem(
-          icon: Icons.dark_mode_outlined,
-          title: 'Chế độ tối',
-          isDark: isDark,
-          trailing: Switch(
-            value: isDark,
-            onChanged: (_) => context.read<ThemeProvider>().toggleTheme(),
-            activeColor: AppColors.primaryLight,
-          ),
-        ),
-        const Divider(height: 1, indent: 56),
-        _buildMenuItem(
-          icon: Icons.lock_outline,
-          title: 'Bảo mật & Quyền riêng tư',
-          isDark: isDark,
-          onTap: () => context.push('/profile/login-history'),
-        ),
-        const Divider(height: 1, indent: 56),
-        _buildMenuItem(
-          icon: Icons.help_outline,
-          title: 'Trợ giúp & Hỗ trợ',
-          isDark: isDark,
-          onTap: () {
-            showAboutDialog(
-              context: context,
-              applicationName: 'Event App',
-              applicationVersion: '1.0.0',
-            );
-          },
-        ),
-      ],
+      ),
     );
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
@@ -39,174 +39,64 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
     return summaries.fold(0, (sum, item) => sum + item.count);
   }
 
-  int _getGroupCount(List<GroupSummary> summaries, String type) {
-    try {
-      return summaries.firstWhere((s) => s.groupType == type).count;
-    } catch (_) {
-      return 0;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RelativeProvider>();
-    final totalCount = _getTotalCount(provider.groupSummary);
+    final summaries = provider.groupSummary;
+    final totalRelatives = _getTotalCount(summaries);
 
     return Scaffold(
       backgroundColor: AppColors.bgLight,
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                // Gradient Header
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 80),
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.accentGradient,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(32),
-                      bottomRight: Radius.circular(32),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Người thân',
-                        style: AppTextStyles.heading1.copyWith(color: AppColors.surfaceLight),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$totalCount người',
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.surfaceLight.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // 4 Group Cards
-                Positioned(
-                  top: 140,
-                  left: 24,
-                  right: 24,
-                  child: GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.5,
-                    children: [
-                      _buildGroupCard(
-                        'GIA_DINH',
-                        'Gia đình',
-                        '👨‍👩‍👧‍👦',
-                        AppColors.groupTypeColors['GIA_DINH'] ?? AppColors.primaryLight,
-                        _getGroupCount(provider.groupSummary, 'GIA_DINH'),
-                        provider.filterGroupType == 'GIA_DINH',
-                      ),
-                      _buildGroupCard(
-                        'VO_CHONG',
-                        'Vợ/Chồng',
-                        '❤️',
-                        AppColors.groupTypeColors['VO_CHONG'] ?? AppColors.accentLight,
-                        _getGroupCount(provider.groupSummary, 'VO_CHONG'),
-                        provider.filterGroupType == 'VO_CHONG',
-                      ),
-                      _buildGroupCard(
-                        'CON_CAI',
-                        'Con cái',
-                        '👶',
-                        AppColors.groupTypeColors['CON_CAI'] ?? AppColors.secondaryLight,
-                        _getGroupCount(provider.groupSummary, 'CON_CAI'),
-                        provider.filterGroupType == 'CON_CAI',
-                      ),
-                      _buildGroupCard(
-                        'BAN_BE',
-                        'Bạn bè',
-                        '👥',
-                        AppColors.groupTypeColors['BAN_BE'] ?? AppColors.warning,
-                        _getGroupCount(provider.groupSummary, 'BAN_BE'),
-                        provider.filterGroupType == 'BAN_BE',
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            child: _buildHeaderAndGroups(totalRelatives, summaries, provider.filterGroupType),
           ),
-          const SliverToBoxAdapter(child: SizedBox(height: 120)), // Space for overlap
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     'Danh sách',
-                    style: AppTextStyles.heading2.copyWith(color: AppColors.textPrimaryLight),
+                    style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.textPrimaryLight.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.4,
+                    height: 40,
                     child: TextField(
                       controller: _searchController,
                       onChanged: (value) {
-                        provider.setSearchQuery(value.isEmpty ? null : value);
+                        context.read<RelativeProvider>().setSearchQuery(value);
                       },
-                      style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryLight),
+                      style: AppTextStyles.bodySmall,
                       decoration: InputDecoration(
                         hintText: 'Tìm kiếm...',
-                        hintStyle: AppTextStyles.body.copyWith(
-                          color: AppColors.textSecondaryLight.withValues(alpha: 0.5),
-                        ),
-                        prefixIcon: const Icon(Icons.search, color: AppColors.textSecondaryLight),
+                        hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight),
+                        prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondaryLight),
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
           if (provider.isLoading)
-            const SliverToBoxAdapter(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: CircularProgressIndicator(color: AppColors.accentLight),
-                ),
-              ),
+            const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
             )
           else if (provider.relatives.isEmpty)
-            SliverToBoxAdapter(
+            SliverFillRemaining(
               child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Text(
-                    'Không có người thân nào',
-                    style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryLight),
-                  ),
-                ),
+                child: Text('Chưa có người thân nào', style: AppTextStyles.body),
               ),
             )
           else
@@ -214,80 +104,163 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final relative = provider.relatives[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16, left: 24, right: 24),
-                    child: _buildRelativeCard(relative, index),
-                  );
+                  return _buildRelativeItem(relative, index);
                 },
                 childCount: provider.relatives.length,
               ),
             ),
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
       ),
     );
   }
 
+  Widget _buildHeaderAndGroups(int total, List<GroupSummary> summaries, String? selectedGroup) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: 220,
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: AppColors.headerGradient,
+            borderRadius: BorderRadius.vertical(
+              bottom: Radius.elliptical(200, 30),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 64, 24, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Người thân',
+                style: AppTextStyles.heading1.copyWith(color: Colors.white),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '$total người',
+                style: AppTextStyles.subtitle.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.only(top: 140),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: _buildGroupGrid(summaries, selectedGroup),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGroupGrid(List<GroupSummary> summaries, String? selectedGroup) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 2.2,
+      children: [
+        _buildGroupCard(
+          'GIA_DINH',
+          'Gia đình',
+          Icons.people,
+          AppColors.iconBgPink,
+          AppColors.primaryLight,
+          _getCount(summaries, 'GIA_DINH'),
+          selectedGroup == 'GIA_DINH',
+        ),
+        _buildGroupCard(
+          'VO_CHONG',
+          'Vợ/Chồng',
+          Icons.favorite,
+          AppColors.iconBgTeal,
+          AppColors.secondaryLight,
+          _getCount(summaries, 'VO_CHONG'),
+          selectedGroup == 'VO_CHONG',
+        ),
+        _buildGroupCard(
+          'CON_CAI',
+          'Con cái',
+          Icons.child_care,
+          AppColors.iconBgPurple,
+          const Color(0xFFCE93D8),
+          _getCount(summaries, 'CON_CAI'),
+          selectedGroup == 'CON_CAI',
+        ),
+        _buildGroupCard(
+          'BAN_BE',
+          'Bạn bè',
+          Icons.person,
+          AppColors.iconBgOrange,
+          const Color(0xFFFFB74D),
+          _getCount(summaries, 'BAN_BE'),
+          selectedGroup == 'BAN_BE',
+        ),
+      ],
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0);
+  }
+
+  int _getCount(List<GroupSummary> summaries, String type) {
+    try {
+      return summaries.firstWhere((s) => s.groupType == type).count;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Widget _buildGroupCard(
-      String type, String title, String emoji, Color color, int count, bool isSelected) {
+      String type, String title, IconData icon, Color bgCol, Color iconCol, int count, bool isSelected) {
     return GestureDetector(
       onTap: () {
         final provider = context.read<RelativeProvider>();
-        if (isSelected) {
-          provider.setGroupFilter(null);
-        } else {
-          provider.setGroupFilter(type);
-        }
+        provider.setGroupFilter(isSelected ? null : type);
       },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: isSelected
-              ? Border.all(color: color, width: 2)
-              : Border.all(color: Colors.transparent, width: 2),
+          border: Border.all(
+            color: isSelected ? iconCol : Colors.transparent,
+            width: 1.5,
+          ),
           boxShadow: [
             BoxShadow(
-              color: AppColors.textPrimaryLight.withValues(alpha: 0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(emoji, style: const TextStyle(fontSize: 16)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: AppTextStyles.label.copyWith(
-                color: AppColors.textPrimaryLight,
-                fontWeight: FontWeight.w600,
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: bgCol,
+                shape: BoxShape.circle,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              child: Icon(icon, color: iconCol, size: 20),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '$count người',
-              style: AppTextStyles.caption.copyWith(
-                color: AppColors.textSecondaryLight,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.label.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '$count người',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                  ),
+                ],
               ),
             ),
           ],
@@ -296,42 +269,32 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
     );
   }
 
-  Widget _buildRelativeCard(RelativeModel relative, int index) {
-    final Color groupColor = AppColors.groupTypeColors[relative.groupType] ?? AppColors.primaryLight;
-    final String initial = relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?';
-
-    String dateStr = '';
+  Widget _buildRelativeItem(RelativeModel relative, int index) {
+    final groupColor = AppColors.groupTypeColors[relative.groupType] ?? AppColors.primaryLight;
+    final initial = relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?';
+    String dobStr = '';
     if (relative.dateOfBirth != null) {
-      dateStr = DateFormat('dd/MM').format(relative.dateOfBirth!);
+      dobStr = DateFormat('dd/MM').format(relative.dateOfBirth!);
     }
 
     return GestureDetector(
       onTap: () => context.push('/relatives/${relative.id}'),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceLight,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.1)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.textPrimaryLight.withValues(alpha: 0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: groupColor.withValues(alpha: 0.1),
+              backgroundColor: groupColor,
               backgroundImage: relative.avatarUrl != null ? NetworkImage(relative.avatarUrl!) : null,
               child: relative.avatarUrl == null
-                  ? Text(
-                      initial,
-                      style: AppTextStyles.heading3.copyWith(color: groupColor),
-                    )
+                  ? Text(initial, style: AppTextStyles.heading3.copyWith(color: Colors.white))
                   : null,
             ),
             const SizedBox(width: 16),
@@ -341,10 +304,7 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
                 children: [
                   Text(
                     relative.displayName,
-                    style: AppTextStyles.subtitle.copyWith(
-                      color: AppColors.textPrimaryLight,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -352,22 +312,22 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: groupColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: groupColor),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           relative.groupTypeDisplay,
-                          style: AppTextStyles.caption.copyWith(color: groupColor),
+                          style: AppTextStyles.caption.copyWith(color: groupColor, fontSize: 10),
                         ),
                       ),
-                      if (dateStr.isNotEmpty) ...[
+                      if (dobStr.isNotEmpty) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.cake, size: 12, color: AppColors.textSecondaryLight),
+                        Icon(Icons.calendar_today, size: 12, color: AppColors.textSecondaryLight),
                         const SizedBox(width: 4),
                         Text(
-                          dateStr,
+                          dobStr,
                           style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
                         ),
                       ],
@@ -377,31 +337,18 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
               ),
             ),
             if (relative.totalEvents != null && relative.totalEvents! > 0)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.bgLight,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '${relative.totalEvents}',
-                      style: AppTextStyles.label.copyWith(
-                        color: AppColors.accentLight,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'sự kiện',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${relative.totalEvents}',
+                    style: AppTextStyles.heading3.copyWith(color: AppColors.secondaryLight),
+                  ),
+                  Text(
+                    'sự kiện',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.secondaryLight),
+                  ),
+                ],
               ),
           ],
         ),

@@ -10,6 +10,7 @@ import '../../ui/screens/home/home_screen.dart';
 import '../../ui/screens/events/event_list_screen.dart';
 import '../../ui/screens/events/event_form_screen.dart';
 import '../../ui/screens/events/event_detail_screen.dart';
+import '../../ui/screens/events/event_type_selection_screen.dart';
 import '../../ui/screens/relatives/relative_list_screen.dart';
 import '../../ui/screens/relatives/relative_form_screen.dart';
 import '../../ui/screens/relatives/relative_detail_screen.dart';
@@ -110,8 +111,17 @@ class AppRouter {
                   builder: (context, state) => const EventListScreen(),
                   routes: [
                     GoRoute(
+                      path: 'new',
+                      builder: (context, state) => const EventTypeSelectionScreen(),
+                    ),
+                    GoRoute(
                       path: 'create',
-                      builder: (context, state) => const EventFormScreen(),
+                      builder: (context, state) {
+                        final type = state.uri.queryParameters['type'];
+                        return EventFormScreen(
+                          isRelativeEvent: type != 'self',
+                        );
+                      },
                     ),
                     GoRoute(
                       path: ':id',

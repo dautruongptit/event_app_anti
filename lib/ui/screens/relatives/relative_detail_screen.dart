@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/relative_provider.dart';
-import 'package:event_app/core/utils/date_utils.dart';
+import 'package:event_app/models/relative.dart';
 import 'package:event_app/models/event.dart';
 
 class RelativeDetailScreen extends StatefulWidget {
@@ -27,434 +26,325 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
     });
   }
 
-  Color _getGroupColor(String groupType) {
-    switch (groupType) {
-      case 'GIA_DINH': return AppColors.primaryLight;
-      case 'VO_CHONG': return Colors.pink;
-      case 'CON_CAI': return Colors.green;
-      case 'BAN_BE': return Colors.orange;
-      default: return Colors.grey;
-    }
-  }
-
-  void _showDeleteDialog() {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Xóa người thân'),
-        content: const Text('Bạn có chắc chắn muốn xóa người thân này? Hành động này không thể hoàn tác.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Hủy'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final success = await context.read<RelativeProvider>().deleteRelative(widget.id);
-              if (success && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Đã xóa người thân')),
-                );
-                context.pop();
-              }
-            },
-            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RelativeProvider>();
     final relative = provider.selectedRelative;
-    final isLoading = provider.isLoading || relative == null || relative.id != widget.id;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      backgroundColor: AppColors.bgLight,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black),
-        actions: isLoading ? [] : [
+        centerTitle: true,
+        title: Text(
+          'Thông tin người thân',
+          style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimaryLight),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => context.push('/relatives/edit/${widget.id}'),
+            icon: const Icon(Icons.edit_outlined, color: AppColors.textPrimaryLight),
+            onPressed: () {
+              // Edit action
+            },
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: _showDeleteDialog,
+            icon: const Icon(Icons.delete_outline, color: AppColors.error),
+            onPressed: () {
+              // Delete action
+            },
           ),
         ],
       ),
-      extendBodyBehindAppBar: true,
-      body: isLoading
-          ? _buildLoadingState()
+      body: provider.isLoading || relative == null
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(24),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(relative, isDark),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
+                  _buildProfileCard(relative),
+                  const SizedBox(height: 24),
+                  _buildBasicInfo(relative),
+                  const SizedBox(height: 24),
+                  _buildRelatedEvents(relative),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildProfileCard(RelativeDetailModel relative) {
+    final initial = relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: AppColors.secondaryLight,
+            backgroundImage: relative.avatarUrl != null ? NetworkImage(relative.avatarUrl!) : null,
+            child: relative.avatarUrl == null
+                ? Text(initial, style: AppTextStyles.heading1.copyWith(color: Colors.white))
+                : null,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            relative.displayName,
+            style: AppTextStyles.heading2.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${relative.genderDisplay} • ${relative.age ?? '?'} tuổi',
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryLight),
+          ),
+          const SizedBox(height: 24),
+          if (relative.daysUntilBirthday != null && relative.dateOfBirth != null)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.iconBgTeal,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cake, color: AppColors.secondaryLight, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (relative.daysUntilBirthday != null)
-                          _buildBirthdayCountdown(relative, isDark)
-                              .animate().fadeIn(delay: 100.ms).slideY(begin: 0.1),
-                        const SizedBox(height: 24),
-                        Text('Thông tin chi tiết', style: AppTextStyles.heading2)
-                            .animate().fadeIn(delay: 200.ms),
-                        const SizedBox(height: 12),
-                        _buildInfoGrid(relative, isDark)
-                            .animate().fadeIn(delay: 300.ms).slideY(begin: 0.1),
-                        if (relative.hobbies != null && relative.hobbies!.isNotEmpty) ...[
-                          const SizedBox(height: 24),
-                          Text('Sở thích', style: AppTextStyles.heading2)
-                              .animate().fadeIn(delay: 400.ms),
-                          const SizedBox(height: 12),
-                          _buildHobbies(relative.hobbies!, isDark)
-                              .animate().fadeIn(delay: 450.ms),
-                        ],
-                        if (relative.relatedEvents.isNotEmpty) ...[
-                          const SizedBox(height: 24),
-                          Text('Sự kiện liên quan', style: AppTextStyles.heading2)
-                              .animate().fadeIn(delay: 500.ms),
-                          const SizedBox(height: 12),
-                          ...relative.relatedEvents.asMap().entries.map((e) {
-                            return _buildEventCard(e.value, isDark)
-                                .animate()
-                                .fadeIn(delay: Duration(milliseconds: 550 + e.key * 50))
-                                .slideY(begin: 0.1);
-                          }),
-                        ],
-                        const SizedBox(height: 40),
+                        Text(
+                          'Sinh nhật Còn ${relative.daysUntilBirthday} ngày',
+                          style: AppTextStyles.subtitle.copyWith(
+                            color: AppColors.secondaryLight,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          DateFormat('dd/MM/yyyy').format(relative.dateOfBirth!),
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.secondaryLight),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
+        ],
+      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
     );
   }
 
-  Widget _buildHeader(dynamic relative, bool isDark) {
-    final color = _getGroupColor(relative.groupType);
+  Widget _buildBasicInfo(RelativeDetailModel relative) {
+    String dobStr = relative.dateOfBirth != null ? DateFormat('dd/MM/yyyy').format(relative.dateOfBirth!) : 'Không có';
+    String specs = '';
+    if (relative.heightCm != null) specs += '${relative.heightCm} cm';
+    if (relative.weightKg != null) {
+      if (specs.isNotEmpty) specs += ' • ';
+      specs += '${relative.weightKg} kg';
+    }
+    if (specs.isEmpty) specs = 'Không có';
+
     return Container(
-      padding: const EdgeInsets.only(top: 100, bottom: 32, left: 16, right: 16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            color.withValues(alpha: 0.4),
-            isDark ? AppColors.bgDark : AppColors.bgLight,
-          ],
-        ),
-      ),
-      child: Column(
-        children: [
-          Hero(
-            tag: 'avatar_${relative.id}',
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.2),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: CircleAvatar(
-                radius: 60,
-                backgroundColor: color.withValues(alpha: 0.2),
-                backgroundImage: relative.avatarUrl != null ? NetworkImage(relative.avatarUrl!) : null,
-                child: relative.avatarUrl == null
-                    ? Text(
-                        relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?',
-                        style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: color),
-                      )
-                    : null,
-              ),
-            ),
-          ).animate().scale(duration: 400.ms),
-          const SizedBox(height: 16),
-          Text(
-            relative.name,
-            style: AppTextStyles.heading1,
-            textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
-          if (relative.nickname != null && relative.nickname!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                relative.nickname!,
-                style: AppTextStyles.subtitle.copyWith(color: Colors.grey),
-              ),
-            ).animate().fadeIn(delay: 300.ms),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildBadge(relative.groupTypeDisplay, color, isDark),
-              if (relative.gender != null && relative.gender!.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                _buildBadge(relative.genderDisplay, Colors.blue, isDark),
-              ]
-            ],
-          ).animate().fadeIn(delay: 400.ms),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Thông tin cơ bản', style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          _buildInfoRow(Icons.calendar_today, 'Ngày sinh', dobStr),
+          const SizedBox(height: 16),
+          _buildInfoRow(Icons.location_on, 'Địa điểm', relative.location ?? 'Không có'),
+          const SizedBox(height: 16),
+          _buildInfoRow(Icons.info_outline, 'Thông số', specs),
+          const SizedBox(height: 16),
+          _buildHobbiesRow(relative.hobbies),
+        ],
+      ).animate().fadeIn(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1, end: 0),
     );
   }
 
-  Widget _buildBadge(String text, Color color, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13),
-      ),
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: AppColors.iconBgTeal,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: AppColors.secondaryLight),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight)),
+              const SizedBox(height: 2),
+              Text(value, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildBirthdayCountdown(dynamic relative, bool isDark) {
-    final isSoon = relative.daysUntilBirthday! <= 7;
+  Widget _buildHobbiesRow(List<String>? hobbies) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: AppColors.iconBgTeal,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.favorite_border, size: 16, color: AppColors.secondaryLight),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Sở thích', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight)),
+              const SizedBox(height: 6),
+              if (hobbies == null || hobbies.isEmpty)
+                Text('Không có', style: AppTextStyles.body.copyWith(fontWeight: FontWeight.bold))
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: hobbies.map((h) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(h, style: AppTextStyles.caption),
+                  )).toList(),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRelatedEvents(RelativeDetailModel relative) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Sự kiện liên quan', style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold)),
+            GestureDetector(
+              onTap: () {},
+              child: Text('+ Thêm sự kiện', style: AppTextStyles.button.copyWith(color: AppColors.primaryLight)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (relative.relatedEvents.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFE0E0E0)),
+            ),
+            child: Center(
+              child: Text(
+                'Chưa có sự kiện nào cho ${relative.displayName}',
+                style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryLight),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else
+          ...relative.relatedEvents.map((e) => _buildEventItem(e)),
+      ],
+    ).animate().fadeIn(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1, end: 0);
+  }
+
+  Widget _buildEventItem(EventModel event) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: isSoon
-            ? LinearGradient(
-                colors: [AppColors.accentLight.withValues(alpha: 0.8), AppColors.accentLight.withValues(alpha: 0.6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : null,
-        color: isSoon ? null : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: isSoon
-            ? [
-                BoxShadow(
-                  color: AppColors.accentLight.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                )
-              ]
-            : null,
+        border: Border.all(color: const Color(0xFFE0E0E0)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isSoon ? Colors.white.withValues(alpha: 0.2) : AppColors.accentLight.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+              color: AppColors.iconBgTeal,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              Icons.cake,
-              color: isSoon ? Colors.white : AppColors.accentLight,
-              size: 28,
-            ),
+            child: Icon(event.eventTypeIcon, color: AppColors.secondaryLight),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Sinh nhật sắp tới',
-                  style: TextStyle(
-                    color: isSoon ? Colors.white70 : Colors.grey,
-                    fontSize: 13,
-                  ),
-                ),
+                Text(event.title, style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
-                Text(
-                  relative.daysUntilBirthday == 0
-                      ? 'Hôm nay!'
-                      : (relative.daysUntilBirthday == 1 ? 'Ngày mai' : 'Còn ${relative.daysUntilBirthday} ngày nữa'),
-                  style: TextStyle(
-                    color: isSoon ? Colors.white : (isDark ? Colors.white : Colors.black87),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoGrid(dynamic relative, bool isDark) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 2.5,
-      children: [
-        if (relative.age != null)
-          _buildInfoItem(Icons.cake_outlined, 'Tuổi', '${relative.age} tuổi', isDark),
-        if (relative.dateOfBirth != null)
-          _buildInfoItem(Icons.calendar_today, 'Ngày sinh', AppDateUtils.formatDate(relative.dateOfBirth!), isDark),
-        if (relative.location != null && relative.location!.isNotEmpty)
-          _buildInfoItem(Icons.location_on_outlined, 'Địa chỉ', relative.location!, isDark),
-        if (relative.gender != null && relative.gender!.isNotEmpty)
-          _buildInfoItem(Icons.person_outline, 'Giới tính', relative.genderDisplay, isDark),
-        if (relative.heightCm != null)
-          _buildInfoItem(Icons.height, 'Chiều cao', '${relative.heightCm} cm', isDark),
-        if (relative.weightKg != null)
-          _buildInfoItem(Icons.monitor_weight_outlined, 'Cân nặng', '${relative.weightKg} kg', isDark),
-      ],
-    );
-  }
-
-  Widget _buildInfoItem(IconData icon, String label, String value, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: AppColors.primaryLight),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHobbies(List<String> hobbies, bool isDark) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: hobbies.map((hobby) {
-        return Chip(
-          label: Text(hobby),
-          backgroundColor: isDark ? Colors.grey[800] : Colors.grey[100],
-          side: BorderSide.none,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildEventCard(EventModel event, bool isDark) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[200]!),
-      ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(event.eventTypeIcon, color: AppColors.primaryLight),
-        ),
-        title: Text(event.title, style: AppTextStyles.subtitle.copyWith(fontWeight: FontWeight.bold)),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Row(
-            children: [
-              Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
-              const SizedBox(width: 4),
-              Text(
-                AppDateUtils.formatDate(event.eventDate),
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-              ),
-            ],
-          ),
-        ),
-        trailing: event.daysUntil != null
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    event.daysUntilText,
-                    style: TextStyle(
-                      color: AppColors.primaryLight,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                Row(
+                  children: [
+                    const Icon(Icons.calendar_today, size: 12, color: AppColors.textSecondaryLight),
+                    const SizedBox(width: 4),
+                    Text(
+                      DateFormat('dd/MM/yyyy').format(event.eventDate),
+                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
                     ),
-                  ),
-                ],
-              )
-            : null,
-      ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            const SizedBox(height: 24),
-            Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
-              child: const CircleAvatar(radius: 60, backgroundColor: Colors.white),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(width: 200, height: 24, color: Colors.white),
+          ),
+          if (event.daysUntil != null)
+            Text(
+              event.daysUntilText,
+              style: AppTextStyles.label.copyWith(color: AppColors.secondaryLight, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 32),
-            Shimmer.fromColors(
-              baseColor: Colors.grey[300]!,
-              highlightColor: Colors.grey[100]!,
-              child: Container(height: 150, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

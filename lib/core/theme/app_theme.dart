@@ -48,11 +48,11 @@ class AppTheme {
         fillColor: AppColors.surfaceLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.textSecondaryLight.withOpacity(0.2)),
+          borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.2)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.textSecondaryLight.withOpacity(0.2)),
+          borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -160,11 +160,11 @@ class AppTheme {
         fillColor: AppColors.surfaceDark,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.textSecondaryDark.withOpacity(0.2)),
+          borderSide: BorderSide(color: AppColors.textSecondaryDark.withValues(alpha: 0.2)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: AppColors.textSecondaryDark.withOpacity(0.2)),
+          borderSide: BorderSide(color: AppColors.textSecondaryDark.withValues(alpha: 0.2)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
