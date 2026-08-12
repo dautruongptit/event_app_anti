@@ -5,7 +5,7 @@ import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/event_provider.dart';
 import 'package:event_app/providers/relative_provider.dart';
-import 'package:event_app/core/utils/date_utils.dart';
+import 'package:event_app/models/relative.dart';
 
 class EventFormScreen extends StatefulWidget {
   final bool isRelativeEvent;
@@ -23,52 +23,60 @@ class EventFormScreen extends StatefulWidget {
 
 class _EventFormScreenState extends State<EventFormScreen> {
   final _titleController = TextEditingController();
-  final _notesController = TextEditingController();
-  
-  String _selectedEventType = 'SINH_NHAT';
+
   int? _selectedRelativeId;
+  String? _selectedRelativeName;
+  String _selectedCategory = 'Gia đình';
+  String _selectedCategoryKey = 'GIA_DINH';
   DateTime _selectedDate = DateTime.now();
-  TimeOfDay? _selectedTime;
-  bool _isRecurring = false;
+  TimeOfDay? _selectedTime = const TimeOfDay(hour: 14, minute: 0);
+  bool _isAllDay = false;
+  String _repeatMode = 'Không lặp';
+  String _repeatKey = 'NONE';
 
-  bool _remind7Days = true;
-  bool _remind3Days = true;
-  bool _remind1Day = true;
-  bool _remind1Hour = false;
+  // Nhắc nhở as list of reminder objects
+  final List<_ReminderItem> _reminders = [
+    _ReminderItem(label: '7 ngày trước', daysBefore: 7),
+    _ReminderItem(label: '3 ngày trước', daysBefore: 3),
+    _ReminderItem(label: '1 ngày trước', daysBefore: 1),
+    _ReminderItem(label: '1 giờ trước', hoursBefore: 1),
+  ];
 
-  List<String> get _eventTypes {
-    if (widget.isRelativeEvent) {
-      return ['SINH_NHAT', 'KY_NIEM', 'LE', 'KHAC'];
-    } else {
-      return ['HOA_DON', 'NHA_O', 'MUA_SAM', 'KHAC'];
-    }
-  }
-  
-  String _getEventTypeName(String type) {
-    const map = {
-      'SINH_NHAT': 'Sinh nhật',
-      'KY_NIEM': 'Kỷ niệm',
-      'LE': 'Ngày giỗ',
-      'HOA_DON': 'Đóng tiền điện',
-      'NHA_O': 'Đóng tiền phòng',
-      'MUA_SAM': 'Mua sắm',
-      'KHAC': 'Khác',
-    };
-    return map[type] ?? type;
-  }
+  // Danh mục list — from Figma screenshot 3
+  static const List<_CategoryItem> _categories = [
+    _CategoryItem(key: 'CA_NHAN', label: 'Cá nhân', icon: Icons.person_outline, color: Color(0xFFF87171)),
+    _CategoryItem(key: 'GIA_DINH', label: 'Gia đình', icon: Icons.people_outline, color: Color(0xFFF87171)),
+    _CategoryItem(key: 'THANH_TOAN', label: 'Thanh toán', icon: Icons.account_balance_wallet_outlined, color: Color(0xFF26A69A)),
+    _CategoryItem(key: 'SUC_KHOE', label: 'Sức khỏe', icon: Icons.favorite_outline, color: Color(0xFF66BB6A)),
+    _CategoryItem(key: 'CONG_VIEC', label: 'Công việc', icon: Icons.work_outline, color: Color(0xFFFFB74D)),
+    _CategoryItem(key: 'HOC_TAP', label: 'Học tập', icon: Icons.school_outlined, color: Color(0xFFEF5350)),
+    _CategoryItem(key: 'PHUONG_TIEN', label: 'Phương tiện', icon: Icons.directions_car_outlined, color: Color(0xFF42A5F5)),
+    _CategoryItem(key: 'DU_LICH', label: 'Du lịch', icon: Icons.flight_outlined, color: Color(0xFFAB47BC)),
+    _CategoryItem(key: 'KHAC', label: 'Khác', icon: Icons.more_horiz, color: Color(0xFF78909C)),
+  ];
+
+  static const List<_RepeatOption> _repeatOptions = [
+    _RepeatOption(key: 'NONE', label: 'Không lặp'),
+    _RepeatOption(key: 'DAILY', label: 'Hàng ngày'),
+    _RepeatOption(key: 'WEEKLY', label: 'Hàng tuần'),
+    _RepeatOption(key: 'MONTHLY', label: 'Hàng tháng'),
+    _RepeatOption(key: 'YEARLY', label: 'Hàng năm'),
+    _RepeatOption(key: 'CUSTOM', label: 'Tùy chỉnh'),
+  ];
+
+  static const List<_ReminderOption> _reminderOptions = [
+    _ReminderOption(label: '7 ngày trước', daysBefore: 7),
+    _ReminderOption(label: '3 ngày trước', daysBefore: 3),
+    _ReminderOption(label: '1 ngày trước', daysBefore: 1),
+    _ReminderOption(label: '1 giờ trước', hoursBefore: 1),
+    _ReminderOption(label: '30 phút trước', hoursBefore: 0, minutesBefore: 30),
+  ];
 
   @override
   void initState() {
     super.initState();
-    if (!widget.isRelativeEvent) {
-      _selectedEventType = 'HOA_DON';
-    }
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.isRelativeEvent) {
-        context.read<RelativeProvider>().loadRelatives();
-      }
-      
+      context.read<RelativeProvider>().loadRelatives();
       if (widget.eventId != null) {
         _loadExistingEvent();
       }
@@ -82,8 +90,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
     if (event != null) {
       setState(() {
         _titleController.text = event.title;
-        _notesController.text = event.notes ?? '';
-        _selectedEventType = event.eventType;
         _selectedRelativeId = event.relativeId;
         _selectedDate = event.eventDate;
         if (event.eventTime != null && event.eventTime!.isNotEmpty) {
@@ -93,18 +99,25 @@ class _EventFormScreenState extends State<EventFormScreen> {
             minute: int.tryParse(parts[1]) ?? 0,
           );
         }
-        _isRecurring = event.isRecurring;
-        
-        _remind7Days = false;
-        _remind3Days = false;
-        _remind1Day = false;
-        _remind1Hour = false;
-        
+        if (event.isRecurring) {
+          _repeatMode = 'Hàng năm';
+          _repeatKey = 'YEARLY';
+        }
+
+        _reminders.clear();
         for (var r in event.reminders) {
-          if (r.remindDaysBefore == 7) _remind7Days = r.isEnabled;
-          if (r.remindDaysBefore == 3) _remind3Days = r.isEnabled;
-          if (r.remindDaysBefore == 1) _remind1Day = r.isEnabled;
-          if (r.remindHoursBefore == 1) _remind1Hour = r.isEnabled;
+          if (r.remindDaysBefore == 7 && r.isEnabled) {
+            _reminders.add(_ReminderItem(label: '7 ngày trước', daysBefore: 7));
+          }
+          if (r.remindDaysBefore == 3 && r.isEnabled) {
+            _reminders.add(_ReminderItem(label: '3 ngày trước', daysBefore: 3));
+          }
+          if (r.remindDaysBefore == 1 && r.isEnabled) {
+            _reminders.add(_ReminderItem(label: '1 ngày trước', daysBefore: 1));
+          }
+          if (r.remindHoursBefore == 1 && r.isEnabled) {
+            _reminders.add(_ReminderItem(label: '1 giờ trước', hoursBefore: 1));
+          }
         }
       });
     }
@@ -113,7 +126,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
@@ -126,18 +138,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primaryLight,
-            ),
+            colorScheme: const ColorScheme.light(primary: AppColors.primaryLight),
           ),
           child: child!,
         );
       },
     );
     if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
+      setState(() => _selectedDate = picked);
     }
   }
 
@@ -148,51 +156,287 @@ class _EventFormScreenState extends State<EventFormScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primaryLight,
-            ),
+            colorScheme: const ColorScheme.light(primary: AppColors.primaryLight),
           ),
           child: child!,
         );
       },
     );
     if (picked != null) {
+      setState(() => _selectedTime = picked);
+    }
+  }
+
+  void _showRepeatSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Lặp lại',
+                      style: AppTextStyles.heading3.copyWith(
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              ..._repeatOptions.map((option) {
+                final isSelected = _repeatKey == option.key;
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  title: Text(
+                    option.label,
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check, color: AppColors.primaryLight, size: 22)
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _repeatKey = option.key;
+                      _repeatMode = option.label;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRelativePicker() async {
+    final relatives = context.read<RelativeProvider>().relatives;
+    if (relatives.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Chưa có người thân nào. Hãy thêm người thân trước.')),
+      );
+      return;
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+                child: Text(
+                  'Chọn người thân',
+                  style: AppTextStyles.heading3.copyWith(
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ...relatives.map((r) {
+                final isSelected = _selectedRelativeId == r.id;
+                final initial = r.displayName.isNotEmpty ? r.displayName[0].toUpperCase() : '?';
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: CircleAvatar(
+                    radius: 20,
+                    backgroundColor: AppColors.primaryLight.withValues(alpha: 0.15),
+                    child: Text(initial, style: AppTextStyles.subtitle.copyWith(color: AppColors.primaryLight)),
+                  ),
+                  title: Text(
+                    r.displayName,
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check, color: AppColors.primaryLight, size: 22)
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _selectedRelativeId = r.id;
+                      _selectedRelativeName = r.displayName;
+                    });
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCategoryPicker() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final result = await Navigator.push<_CategoryItem>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _CategoryPickerScreen(
+          categories: _categories,
+          selectedKey: _selectedCategoryKey,
+          isDark: isDark,
+        ),
+      ),
+    );
+    if (result != null) {
       setState(() {
-        _selectedTime = picked;
+        _selectedCategory = result.label;
+        _selectedCategoryKey = result.key;
       });
     }
+  }
+
+  void _showAddReminderSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Filter out already-added reminders
+    final existingLabels = _reminders.map((r) => r.label).toSet();
+    final available = _reminderOptions.where((o) => !existingLabels.contains(o.label)).toList();
+
+    if (available.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã thêm tất cả nhắc nhở')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+                child: Text(
+                  'Thêm nhắc nhở',
+                  style: AppTextStyles.heading3.copyWith(
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              ...available.map((option) {
+                return ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: const Icon(Icons.notifications_none, color: AppColors.primaryLight),
+                  title: Text(
+                    option.label,
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _reminders.add(_ReminderItem(
+                        label: option.label,
+                        daysBefore: option.daysBefore,
+                        hoursBefore: option.hoursBefore,
+                      ));
+                    });
+                    Navigator.pop(ctx);
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _saveEvent() {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng nhập tiêu đề sự kiện')),
-      );
-      return;
-    }
-    
-    if (widget.isRelativeEvent && _selectedRelativeId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn người thân')),
+        const SnackBar(content: Text('Vui lòng nhập tên sự kiện')),
       );
       return;
     }
 
     final reminders = <Map<String, dynamic>>[];
-    if (_remind7Days) reminders.add({'remindDaysBefore': 7, 'isEnabled': true});
-    if (_remind3Days) reminders.add({'remindDaysBefore': 3, 'isEnabled': true});
-    if (_remind1Day) reminders.add({'remindDaysBefore': 1, 'isEnabled': true});
-    if (_remind1Hour) reminders.add({'remindHoursBefore': 1, 'isEnabled': true});
+    for (var r in _reminders) {
+      if (r.daysBefore != null && r.daysBefore! > 0) {
+        reminders.add({'remindDaysBefore': r.daysBefore, 'isEnabled': true});
+      }
+      if (r.hoursBefore != null && r.hoursBefore! > 0) {
+        reminders.add({'remindHoursBefore': r.hoursBefore, 'isEnabled': true});
+      }
+    }
+
+    // Map category key to event type for backend
+    String eventType;
+    switch (_selectedCategoryKey) {
+      case 'CA_NHAN':
+        eventType = 'KHAC';
+        break;
+      case 'GIA_DINH':
+        eventType = 'SINH_NHAT';
+        break;
+      case 'THANH_TOAN':
+        eventType = 'HOA_DON';
+        break;
+      case 'SUC_KHOE':
+      case 'CONG_VIEC':
+      case 'HOC_TAP':
+      case 'PHUONG_TIEN':
+      case 'DU_LICH':
+        eventType = 'KHAC';
+        break;
+      default:
+        eventType = 'KHAC';
+    }
 
     final data = {
       'title': _titleController.text.trim(),
-      'eventType': _selectedEventType,
+      'eventType': eventType,
       'eventDate': _selectedDate.toIso8601String().split('T').first,
-      'eventTime': _selectedTime != null 
+      'eventTime': (!_isAllDay && _selectedTime != null)
           ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
           : null,
-      'isRecurring': _isRecurring,
-      'notes': _notesController.text.trim(),
+      'isRecurring': _repeatKey != 'NONE',
+      'notes': '',
       'relativeId': _selectedRelativeId,
       'reminders': reminders,
     };
@@ -200,353 +444,520 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final provider = context.read<EventProvider>();
     if (widget.eventId != null) {
       provider.updateEvent(widget.eventId!, data).then((success) {
-        if (success) Navigator.pop(context);
+        if (success && mounted) Navigator.pop(context);
       });
     } else {
       provider.createEvent(data).then((success) {
-        if (success) Navigator.pop(context);
+        if (success && mounted) Navigator.pop(context);
       });
     }
   }
 
+  // ─── Format Helpers ──────────────────────
+
+  String _formatDate(DateTime d) {
+    const months = ['', 'tháng 1', 'tháng 2', 'tháng 3', 'tháng 4', 'tháng 5', 'tháng 6',
+      'tháng 7', 'tháng 8', 'tháng 9', 'tháng 10', 'tháng 11', 'tháng 12'];
+    return '${d.day} ${months[d.month]},\n${d.year}';
+  }
+
+  String _formatTime(TimeOfDay t) {
+    return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+  }
+
+  // ─── BUILD ──────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final onSurface = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final fieldFill = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
     final borderColor = isDark ? Colors.white12 : const Color(0xFFE0E0E0);
+    final onSurface = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final subText = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: AppBar(
         backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: onSurface),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryLight, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
+        leadingWidth: 72,
         title: Text(
-          widget.isRelativeEvent ? 'Sự kiện Người thân' : 'Sự kiện Bản thân',
-          style: AppTextStyles.heading2.copyWith(color: onSurface),
+          'Thêm sự kiện',
+          style: AppTextStyles.heading3.copyWith(color: onSurface, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.isRelativeEvent) ...[
-              Text('Chọn người thân', style: AppTextStyles.heading3.copyWith(color: onSurface)),
-              const SizedBox(height: 12),
-              _buildRelativeChips(),
-              const SizedBox(height: 24),
-            ],
-
-            Text('Tiêu đề sự kiện', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: fieldFill,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primaryLight),
-                ),
+        actions: [
+          TextButton(
+            onPressed: context.watch<EventProvider>().isLoading ? null : _saveEvent,
+            child: Text(
+              'Lưu',
+              style: AppTextStyles.subtitle.copyWith(
+                color: AppColors.primaryLight,
+                fontWeight: FontWeight.w600,
               ),
-              style: AppTextStyles.body,
             ),
-            const SizedBox(height: 24),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Title Field ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: TextField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        hintText: 'Nhập tên sự kiện',
+                        hintStyle: AppTextStyles.body.copyWith(color: subText),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      ),
+                      style: AppTextStyles.body.copyWith(color: onSurface),
+                    ),
+                  ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05),
+                  const SizedBox(height: 16),
 
-            Text('Loại sự kiện', style: AppTextStyles.heading3.copyWith(color: onSurface)),
-            const SizedBox(height: 12),
-            _buildEventTypeChips(),
-            const SizedBox(height: 24),
-
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Ngày (yyyy-MM-dd)', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: _selectDate,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: fieldFill,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                AppDateUtils.formatDate(_selectedDate),
-                                style: AppTextStyles.body,
-                              ),
-                              const Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.primaryLight),
-                            ],
+                  // ── Người liên quan + Danh mục Card ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: Column(
+                      children: [
+                        // Người liên quan
+                        InkWell(
+                          onTap: _showRelativePicker,
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Row(
+                              children: [
+                                Icon(Icons.person_outline, color: AppColors.primaryLight, size: 22),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Người liên quan',
+                                  style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w500),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  _selectedRelativeName ?? 'Chọn người thân',
+                                  style: AppTextStyles.bodySmall.copyWith(color: subText),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(Icons.chevron_right, color: subText, size: 20),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Giờ (HH:mm)', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: _selectTime,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: fieldFill,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
+                        Divider(height: 1, color: borderColor),
+                        // Danh mục
+                        InkWell(
+                          onTap: _showCategoryPicker,
+                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(14)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            child: Row(
+                              children: [
+                                Icon(Icons.label_outline, color: AppColors.primaryLight, size: 22),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Danh mục',
+                                  style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w500),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  _selectedCategory,
+                                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryLight),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(Icons.chevron_right, color: subText, size: 20),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _selectedTime != null 
-                                    ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
-                                    : 'Chọn giờ',
-                                style: AppTextStyles.body.copyWith(
-                                  color: _selectedTime != null ? onSurface : AppColors.textSecondaryLight,
+                        ),
+                      ],
+                    ),
+                  ).animate().fadeIn(delay: 100.ms, duration: 300.ms).slideY(begin: 0.05),
+                  const SizedBox(height: 16),
+
+                  // ── Date / Time + All Day Card ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Column(
+                      children: [
+                        // Date + Time row
+                        Row(
+                          children: [
+                            // Date
+                            Expanded(
+                              flex: 3,
+                              child: GestureDetector(
+                                onTap: _selectDate,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.iconBgTeal,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.secondaryLight),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Ngày', style: AppTextStyles.caption.copyWith(color: subText)),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          _formatDate(_selectedDate),
+                                          style: AppTextStyles.body.copyWith(
+                                            color: onSurface,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const Icon(Icons.access_time_rounded, size: 20, color: AppColors.primaryLight),
+                            ),
+                            // Time
+                            if (!_isAllDay)
+                              Expanded(
+                                flex: 2,
+                                child: GestureDetector(
+                                  onTap: _selectTime,
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.iconBgPink,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(Icons.access_time_rounded, size: 16, color: AppColors.primaryLight),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('Giờ', style: AppTextStyles.caption.copyWith(color: subText)),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            _selectedTime != null ? _formatTime(_selectedTime!) : '--:--',
+                                            style: AppTextStyles.body.copyWith(
+                                              color: onSurface,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Divider(height: 1, color: borderColor),
+                        const SizedBox(height: 8),
+                        // Cả ngày toggle
+                        Row(
+                          children: [
+                            Icon(Icons.wb_sunny_outlined, size: 20, color: subText),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Cả ngày',
+                              style: AppTextStyles.body.copyWith(color: onSurface),
+                            ),
+                            const Spacer(),
+                            Switch(
+                              value: _isAllDay,
+                              onChanged: (v) => setState(() => _isAllDay = v),
+                              activeColor: AppColors.primaryLight,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ).animate().fadeIn(delay: 200.ms, duration: 300.ms).slideY(begin: 0.05),
+                  const SizedBox(height: 16),
+
+                  // ── Lặp lại Row ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor),
+                    ),
+                    child: InkWell(
+                      onTap: _showRepeatSheet,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: Row(
+                          children: [
+                            Icon(Icons.repeat_rounded, size: 22, color: subText),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Lặp lại',
+                              style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w500),
+                            ),
+                            const Spacer(),
+                            Text(_repeatMode, style: AppTextStyles.bodySmall.copyWith(color: subText)),
+                            const SizedBox(width: 4),
+                            Icon(Icons.chevron_right, color: subText, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ).animate().fadeIn(delay: 300.ms, duration: 300.ms).slideY(begin: 0.05),
+                  const SizedBox(height: 16),
+
+                  // ── Nhắc nhở Section ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.notifications_none, size: 22, color: onSurface),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Nhắc nhở',
+                              style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // Reminder chips (coral bg, with X button)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ..._reminders.asMap().entries.map((entry) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primaryLight.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      entry.value.label,
+                                      style: AppTextStyles.caption.copyWith(
+                                        color: AppColors.primaryLight,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    GestureDetector(
+                                      onTap: () => setState(() => _reminders.removeAt(entry.key)),
+                                      child: Icon(Icons.close, size: 14, color: AppColors.primaryLight),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        // "+ Thêm nhắc nhở" button
+                        GestureDetector(
+                          onTap: _showAddReminderSheet,
+                          child: Row(
+                            children: [
+                              Icon(Icons.add_circle_outline, size: 18, color: subText),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Thêm nhắc nhở',
+                                style: AppTextStyles.bodySmall.copyWith(color: subText),
+                              ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Lặp lại', style: AppTextStyles.heading3.copyWith(color: onSurface)),
-                Switch(
-                  value: _isRecurring,
-                  onChanged: (v) => setState(() => _isRecurring = v),
-                  activeColor: AppColors.primaryLight,
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            Text('Nhắc nhở', style: AppTextStyles.heading3.copyWith(color: onSurface)),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: fieldFill,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: borderColor),
-              ),
-              child: Column(
-                children: [
-                  _buildReminderToggle('7 ngày trước', _remind7Days, (v) => setState(() => _remind7Days = v)),
-                  Divider(height: 1, color: borderColor),
-                  _buildReminderToggle('3 ngày trước', _remind3Days, (v) => setState(() => _remind3Days = v)),
-                  Divider(height: 1, color: borderColor),
-                  _buildReminderToggle('1 ngày trước', _remind1Day, (v) => setState(() => _remind1Day = v)),
-                  Divider(height: 1, color: borderColor),
-                  _buildReminderToggle('1 giờ trước', _remind1Hour, (v) => setState(() => _remind1Hour = v)),
+                      ],
+                    ),
+                  ).animate().fadeIn(delay: 400.ms, duration: 300.ms).slideY(begin: 0.05),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+          ),
 
-            Text('Ghi chú (tùy chọn)', style: AppTextStyles.label.copyWith(color: AppColors.textSecondaryLight)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _notesController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: fieldFill,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primaryLight),
-                ),
-              ),
-              style: AppTextStyles.body,
-            ),
-            const SizedBox(height: 40),
-
-            SizedBox(
+          // ── Bottom Save Button ──
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            child: SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 54,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: AppColors.accentGradient,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: ElevatedButton(
                   onPressed: context.watch<EventProvider>().isLoading ? null : _saveEvent,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
                   child: context.watch<EventProvider>().isLoading
                       ? const SizedBox(
                           width: 24, height: 24,
-                          child: CircularProgressIndicator(color: AppColors.surfaceLight, strokeWidth: 2),
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : Text(
                           'Lưu sự kiện',
-                          style: AppTextStyles.button.copyWith(color: AppColors.surfaceLight),
+                          style: AppTextStyles.button.copyWith(color: Colors.white, fontSize: 16),
                         ),
                 ),
               ),
             ),
-            const SizedBox(height: 40),
-          ].animate(interval: 50.ms).fade(duration: 300.ms).slideY(begin: 0.1, end: 0, duration: 300.ms),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRelativeChips() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final provider = context.watch<RelativeProvider>();
-    final relatives = provider.relatives;
-    
-    if (relatives.isEmpty) {
-      return Text('Chưa có người thân nào', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight));
-    }
-    
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: relatives.length,
-        itemBuilder: (context, index) {
-          final relative = relatives[index];
-          final isSelected = _selectedRelativeId == relative.id;
-          
-          return GestureDetector(
-            onTap: () => setState(() => _selectedRelativeId = relative.id),
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primaryLight
-                    : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                relative.displayName,
-                style: AppTextStyles.label.copyWith(
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildEventTypeChips() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _eventTypes.length,
-        itemBuilder: (context, index) {
-          final type = _eventTypes[index];
-          final isSelected = _selectedEventType == type;
-          
-          return GestureDetector(
-            onTap: () => setState(() => _selectedEventType = type),
-            child: Container(
-              margin: const EdgeInsets.only(right: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.primaryLight
-                    : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                _getEventTypeName(type),
-                style: AppTextStyles.label.copyWith(
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildReminderToggle(String label, bool value, ValueChanged<bool> onChanged) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.body.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.primaryLight,
           ),
         ],
       ),
     );
   }
+}
+
+// ─── Category Picker Screen (Figma: Danh mục) ──────────
+
+class _CategoryPickerScreen extends StatelessWidget {
+  final List<_CategoryItem> categories;
+  final String selectedKey;
+  final bool isDark;
+
+  const _CategoryPickerScreen({
+    required this.categories,
+    required this.selectedKey,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final cardColor = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final onSurface = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+
+    return Scaffold(
+      backgroundColor: bg,
+      appBar: AppBar(
+        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: onSurface),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Danh mục',
+          style: AppTextStyles.heading3.copyWith(color: onSurface, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: false,
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 2),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = cat.key == selectedKey;
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? cat.color.withValues(alpha: 0.12)
+                  : cardColor,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              leading: Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: cat.color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(cat.icon, color: cat.color, size: 22),
+              ),
+              title: Text(
+                cat.label,
+                style: AppTextStyles.body.copyWith(
+                  color: onSurface,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+              trailing: isSelected
+                  ? Icon(Icons.check, color: cat.color, size: 22)
+                  : null,
+              onTap: () => Navigator.pop(context, cat),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ─── Data Classes ──────────────────────────
+
+class _CategoryItem {
+  final String key;
+  final String label;
+  final IconData icon;
+  final Color color;
+  const _CategoryItem({required this.key, required this.label, required this.icon, required this.color});
+}
+
+class _RepeatOption {
+  final String key;
+  final String label;
+  const _RepeatOption({required this.key, required this.label});
+}
+
+class _ReminderOption {
+  final String label;
+  final int daysBefore;
+  final int hoursBefore;
+  final int minutesBefore;
+  const _ReminderOption({required this.label, this.daysBefore = 0, this.hoursBefore = 0, this.minutesBefore = 0});
+}
+
+class _ReminderItem {
+  final String label;
+  final int? daysBefore;
+  final int? hoursBefore;
+  _ReminderItem({required this.label, this.daysBefore, this.hoursBefore});
 }
