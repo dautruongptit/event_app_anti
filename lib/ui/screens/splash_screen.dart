@@ -143,11 +143,7 @@ class SplashScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ElevatedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Tính năng đang phát triển')),
-                      );
-                    },
+                    onPressed: () => context.go('/login'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                       foregroundColor: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
@@ -163,10 +159,10 @@ class SplashScreen extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.g_mobiledata_rounded, size: 28),
+                        const Icon(Icons.login_rounded, size: 24),
                         const SizedBox(width: 8),
                         Text(
-                          'Tiếp tục với Google',
+                          'Đăng nhập',
                           style: AppTextStyles.button,
                         ),
                       ],

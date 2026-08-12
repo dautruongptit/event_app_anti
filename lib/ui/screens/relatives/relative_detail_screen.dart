@@ -26,37 +26,71 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
     });
   }
 
+  void _confirmDelete(String name) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Xác nhận xoá'),
+        content: Text('Bạn có chắc muốn xoá "$name"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Huỷ'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final success =
+                  await context.read<RelativeProvider>().deleteRelative(widget.id);
+              if (mounted && success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Đã xoá người thân')),
+                );
+                context.pop();
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Xoá'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<RelativeProvider>();
     final relative = provider.selectedRelative;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
         title: Text(
           'Thông tin người thân',
-          style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight),
+          style: AppTextStyles.heading3.copyWith(color: onSurface),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimaryLight),
+          icon: Icon(Icons.arrow_back, color: onSurface),
           onPressed: () => context.pop(),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.textPrimaryLight),
-            onPressed: () {
-              // Edit action
-            },
+            icon: Icon(Icons.edit_outlined, color: onSurface),
+            onPressed: relative == null
+                ? null
+                : () => context.push('/relatives/${widget.id}/edit'),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppColors.error),
-            onPressed: () {
-              // Delete action
-            },
+            onPressed: relative == null
+                ? null
+                : () => _confirmDelete(relative.displayName),
           ),
         ],
       ),
@@ -79,13 +113,14 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
   }
 
   Widget _buildProfileCard(RelativeDetailModel relative) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final initial = relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?';
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.cardDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -162,12 +197,13 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
       specs += '${relative.weightKg} kg';
     }
     if (specs.isEmpty) specs = 'Không có';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.cardDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -222,6 +258,7 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
   }
 
   Widget _buildHobbiesRow(List<String>? hobbies) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -249,7 +286,7 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
                   children: hobbies.map((h) => Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFE0E0E0)),
+                      border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE0E0E0)),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(h, style: AppTextStyles.caption),
@@ -263,6 +300,7 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
   }
 
   Widget _buildRelatedEvents(RelativeDetailModel relative) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -271,7 +309,7 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
           children: [
             Text('Sự kiện liên quan', style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold)),
             GestureDetector(
-              onTap: () {},
+              onTap: () => context.push('/events/create?type=relative'),
               child: Text('+ Thêm sự kiện', style: AppTextStyles.button.copyWith(color: AppColors.primaryLight)),
             ),
           ],
@@ -282,9 +320,9 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? AppColors.cardDark : Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE0E0E0)),
+              border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE0E0E0)),
             ),
             child: Center(
               child: Text(
@@ -301,13 +339,14 @@ class _RelativeDetailScreenState extends State<RelativeDetailScreen> {
   }
 
   Widget _buildEventItem(EventModel event) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.cardDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        border: Border.all(color: isDark ? Colors.white12 : const Color(0xFFE0E0E0)),
       ),
       child: Row(
         children: [

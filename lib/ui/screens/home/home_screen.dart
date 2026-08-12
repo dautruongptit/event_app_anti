@@ -518,7 +518,7 @@ class _HomeScreenState extends State<HomeScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: OutlinedButton(
-            onPressed: () => context.push('/events/create'),
+            onPressed: () => context.push('/events/new'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.primaryLight,
               side: const BorderSide(color: AppColors.primaryLight, style: BorderStyle.solid),

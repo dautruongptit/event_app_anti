@@ -5,9 +5,65 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/theme/theme_provider.dart';
+import '../../../providers/auth_provider.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+
+    setState(() => _isLoading = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.register(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (!mounted) return;
+
+      if (success) {
+        context.go('/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.error ?? 'Đăng ký thất bại'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +97,7 @@ class RegisterScreen extends StatelessWidget {
                         if (context.canPop()) {
                           context.pop();
                         } else {
-                          context.go('/');
+                          context.go('/login');
                         }
                       },
                     ),
@@ -68,115 +124,144 @@ class RegisterScreen extends StatelessWidget {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    // Small Logo & App Name
-                    Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            gradient: AppColors.accentGradient,
-                            borderRadius: BorderRadius.circular(8),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      // Small Logo & App Name
+                      Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.accentGradient,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_active_rounded,
+                              size: 16,
+                              color: Colors.white,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.notifications_active_rounded,
-                            size: 16,
-                            color: Colors.white,
+                          const SizedBox(width: 12),
+                          Text(
+                            'Tham gia ngay',
+                            style: AppTextStyles.body.copyWith(
+                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            ),
                           ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Nhắc Sự Kiện',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            ),
+                          ),
+                        ],
+                      ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.2),
+
+                      const SizedBox(height: 24),
+
+                      // Headings
+                      Text(
+                        'Bắt đầu hành trình',
+                        style: AppTextStyles.heading1.copyWith(
+                          color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          fontSize: 32,
                         ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Tham gia ngay',
-                          style: AppTextStyles.body.copyWith(
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          ),
+                      ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
+                      Text(
+                        'lưu giữ kỷ niệm',
+                        style: AppTextStyles.heading1.copyWith(
+                          color: AppColors.primaryLight,
+                          fontSize: 32,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Nhắc Sự Kiện',
-                          style: AppTextStyles.subtitle.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                          ),
+                      ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+
+                      const SizedBox(height: 12),
+
+                      Text(
+                        'Tạo tài khoản miễn phí chỉ trong vài giây',
+                        style: AppTextStyles.body.copyWith(
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          fontSize: 16,
                         ),
-                      ],
-                    ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.2),
+                      ).animate().fadeIn(delay: 400.ms),
 
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 32),
 
-                    // Headings
-                    Text(
-                      'Bắt đầu hành trình',
-                      style: AppTextStyles.heading1.copyWith(
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                        fontSize: 32,
-                      ),
-                    ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
-                    Text(
-                      'lưu giữ kỷ niệm',
-                      style: AppTextStyles.heading1.copyWith(
-                        color: AppColors.primaryLight,
-                        fontSize: 32,
-                      ),
-                    ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
+                      // Form fields
+                      _buildTextField(
+                        controller: _nameController,
+                        label: 'Họ tên',
+                        icon: Icons.person_outline,
+                        isDark: isDark,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Vui lòng nhập họ tên';
+                          return null;
+                        },
+                      ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _emailController,
+                        label: 'Email',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        isDark: isDark,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Vui lòng nhập email';
+                          if (!v.contains('@')) return 'Email không hợp lệ';
+                          return null;
+                        },
+                      ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _passwordController,
+                        label: 'Mật khẩu',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _obscurePassword,
+                        isDark: isDark,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Vui lòng nhập mật khẩu';
+                          if (v.length < 6) return 'Mật khẩu phải từ 6 ký tự';
+                          return null;
+                        },
+                      ).animate().fadeIn(delay: 700.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 16),
+                      _buildTextField(
+                        controller: _confirmController,
+                        label: 'Nhập lại mật khẩu',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _obscureConfirm,
+                        isDark: isDark,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                            color: AppColors.textSecondaryLight,
+                          ),
+                          onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                        ),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) return 'Vui lòng nhập lại mật khẩu';
+                          if (v != _passwordController.text) return 'Mật khẩu không khớp';
+                          return null;
+                        },
+                      ).animate().fadeIn(delay: 800.ms).slideY(begin: 0.1),
 
-                    const SizedBox(height: 16),
-
-                    Text(
-                      'Tạo tài khoản miễn phí — chỉ cần tài khoản Google của bạn',
-                      style: AppTextStyles.body.copyWith(
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                        fontSize: 16,
-                      ),
-                    ).animate().fadeIn(delay: 400.ms),
-
-                    const SizedBox(height: 32),
-
-                    // Benefits
-                    _buildBenefitRow(
-                      icon: Icons.favorite_rounded,
-                      iconBg: AppColors.iconBgPink,
-                      iconColor: AppColors.primaryLight,
-                      text: 'Nhắc nhở sinh nhật & kỷ niệm tự động',
-                      isDark: isDark,
-                    ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.2),
-                    
-                    const SizedBox(height: 16),
-                    
-                    _buildBenefitRow(
-                      icon: Icons.notifications_active_rounded,
-                      iconBg: AppColors.iconBgTeal,
-                      iconColor: AppColors.secondaryLight,
-                      text: 'Thông báo trước 1-7 ngày tuỳ chỉnh',
-                      isDark: isDark,
-                    ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.2),
-                    
-                    const SizedBox(height: 16),
-                    
-                    _buildBenefitRow(
-                      icon: Icons.star_rounded,
-                      iconBg: AppColors.iconBgYellow,
-                      iconColor: AppColors.warning,
-                      text: 'Lưu trữ kỷ niệm và ghi chú đặc biệt',
-                      isDark: isDark,
-                    ).animate().fadeIn(delay: 700.ms).slideX(begin: 0.2),
-                    
-                    const SizedBox(height: 16),
-                    
-                    _buildBenefitRow(
-                      icon: Icons.card_giftcard_rounded,
-                      iconBg: AppColors.iconBgPurple,
-                      iconColor: AppColors.accentLight,
-                      text: 'Gợi ý quà tặng theo từng dịp',
-                      isDark: isDark,
-                    ).animate().fadeIn(delay: 800.ms).slideX(begin: 0.2),
-
-                    const SizedBox(height: 40),
-                  ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -198,15 +283,6 @@ class RegisterScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Đăng ký bằng tài khoản Google của bạn — nhanh chóng & bảo mật',
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
                   Container(
                     width: double.infinity,
                     height: 56,
@@ -222,11 +298,7 @@ class RegisterScreen extends StatelessWidget {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Tính năng đang phát triển')),
-                        );
-                      },
+                      onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
@@ -234,22 +306,24 @@ class RegisterScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.g_mobiledata_rounded, color: Colors.white, size: 32),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Đăng ký với Google',
-                            style: AppTextStyles.button.copyWith(color: Colors.white),
-                          ),
-                        ],
-                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : Text(
+                              'Tạo tài khoản',
+                              style: AppTextStyles.button.copyWith(color: Colors.white),
+                            ),
                     ),
                   ),
-                  
-                  const SizedBox(height: 24),
-                  
+
+                  const SizedBox(height: 20),
+
                   GestureDetector(
                     onTap: () => context.go('/login'),
                     child: RichText(
@@ -281,40 +355,47 @@ class RegisterScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBenefitRow({
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
     required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
-    required String text,
     required bool isDark,
+    bool obscureText = false,
+    Widget? suffixIcon,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: iconBg,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: iconColor, size: 20),
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      validator: validator,
+      style: AppTextStyles.body.copyWith(
+        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(
+          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            text,
-            style: AppTextStyles.body.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+        prefixIcon: Icon(icon, color: AppColors.textSecondaryLight),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
         ),
-        const SizedBox(width: 8),
-        const Icon(
-          Icons.check_circle_rounded,
-          color: AppColors.primaryLight,
-          size: 24,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
         ),
-      ],
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primaryLight, width: 1.5),
+        ),
+        errorStyle: const TextStyle(color: AppColors.error, fontWeight: FontWeight.w500),
+      ),
     );
   }
 }

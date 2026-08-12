@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
@@ -62,7 +63,8 @@ class _EventListScreenState extends State<EventListScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<EventProvider>();
     final allEvents = provider.events;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     // Extract months for the filter chips
     final availableMonths = allEvents
         .map((e) => e.eventDate.month)
@@ -82,7 +84,14 @@ class _EventListScreenState extends State<EventListScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/events/new'),
+        backgroundColor: AppColors.primaryLight,
+        foregroundColor: AppColors.surfaceLight,
+        icon: const Icon(Icons.add),
+        label: Text('Thêm sự kiện', style: AppTextStyles.button),
+      ),
       body: Column(
         children: [
           // Gradient Header
@@ -148,6 +157,7 @@ class _EventListScreenState extends State<EventListScreen> {
                       label: 'Tất cả',
                       isSelected: _selectedMonth == null,
                       onTap: () => _onMonthSelected(null),
+                      isDark: isDark,
                     ),
                     ...availableMonths.map((month) {
                       return Padding(
@@ -156,6 +166,7 @@ class _EventListScreenState extends State<EventListScreen> {
                           label: 'Tháng $month',
                           isSelected: _selectedMonth == month,
                           onTap: () => _onMonthSelected(month),
+                          isDark: isDark,
                         ),
                       );
                     }),
@@ -172,7 +183,9 @@ class _EventListScreenState extends State<EventListScreen> {
                     ? Center(
                         child: Text(
                           'Không có sự kiện nào',
-                          style: AppTextStyles.body.copyWith(color: AppColors.textSecondaryLight),
+                          style: AppTextStyles.body.copyWith(
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
                         ),
                       )
                     : ListView.builder(
@@ -190,7 +203,7 @@ class _EventListScreenState extends State<EventListScreen> {
                                 child: Text(
                                   key,
                                   style: AppTextStyles.heading3.copyWith(
-                                    color: AppColors.textPrimaryLight,
+                                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                                   ),
                                 ),
                               ),
@@ -214,13 +227,16 @@ class _EventListScreenState extends State<EventListScreen> {
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primaryLight : AppColors.surfaceLight,
+          color: isSelected
+              ? AppColors.primaryLight
+              : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
@@ -231,7 +247,9 @@ class _EventListScreenState extends State<EventListScreen> {
         child: Text(
           label,
           style: AppTextStyles.label.copyWith(
-            color: isSelected ? AppColors.surfaceLight : AppColors.textSecondaryLight,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
           ),
         ),
       ),
@@ -239,6 +257,7 @@ class _EventListScreenState extends State<EventListScreen> {
   }
 
   Widget _buildEventCard(BuildContext context, EventModel event) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     Color iconBg;
     switch (event.eventType) {
       case 'SINH_NHAT':
@@ -260,10 +279,10 @@ class _EventListScreenState extends State<EventListScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight,
+        color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFE0E0E0),
+          color: isDark ? Colors.white12 : const Color(0xFFE0E0E0),
           width: 1,
         ),
       ),
@@ -291,7 +310,7 @@ class _EventListScreenState extends State<EventListScreen> {
                   event.title,
                   style: AppTextStyles.subtitle.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryLight,
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                   ),
                 ),
                 if (event.relativeName != null) ...[
@@ -329,7 +348,7 @@ class _EventListScreenState extends State<EventListScreen> {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded, color: AppColors.textSecondaryLight),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            color: AppColors.surfaceLight,
+            color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
             elevation: 4,
             onSelected: (value) {
               if (value == 'edit') {

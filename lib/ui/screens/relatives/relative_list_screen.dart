@@ -44,9 +44,17 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
     final provider = context.watch<RelativeProvider>();
     final summaries = provider.groupSummary;
     final totalRelatives = _getTotalCount(summaries);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/relatives/create'),
+        backgroundColor: AppColors.primaryLight,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.person_add_alt_1),
+        label: Text('Thêm người thân', style: AppTextStyles.button),
+      ),
       body: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -76,7 +84,7 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
                         hintStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondaryLight),
                         prefixIcon: const Icon(Icons.search, size: 18, color: AppColors.textSecondaryLight),
                         filled: true,
-                        fillColor: Colors.grey[200],
+                        fillColor: isDark ? AppColors.surfaceDark : Colors.grey[200],
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
@@ -212,6 +220,7 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
 
   Widget _buildGroupCard(
       String type, String title, IconData icon, Color bgCol, Color iconCol, int count, bool isSelected) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: () {
         final provider = context.read<RelativeProvider>();
@@ -220,7 +229,7 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppColors.cardDark : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? iconCol : Colors.transparent,
@@ -270,6 +279,7 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
   }
 
   Widget _buildRelativeItem(RelativeModel relative, int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final groupColor = AppColors.groupTypeColors[relative.groupType] ?? AppColors.primaryLight;
     final initial = relative.name.isNotEmpty ? relative.name[0].toUpperCase() : '?';
     String dobStr = '';
@@ -283,9 +293,12 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? AppColors.cardDark : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+          border: Border.all(
+            color: isDark ? Colors.white12 : const Color(0xFFE0E0E0),
+            width: 1,
+          ),
         ),
         child: Row(
           children: [

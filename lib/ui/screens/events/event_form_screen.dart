@@ -5,7 +5,6 @@ import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/event_provider.dart';
 import 'package:event_app/providers/relative_provider.dart';
-import 'package:event_app/models/event.dart';
 import 'package:event_app/core/utils/date_utils.dart';
 
 class EventFormScreen extends StatefulWidget {
@@ -212,18 +211,22 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final onSurface = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final fieldFill = isDark ? AppColors.surfaceDark : AppColors.surfaceLight;
+    final borderColor = isDark ? Colors.white12 : const Color(0xFFE0E0E0);
     return Scaffold(
-      backgroundColor: AppColors.bgLight,
+      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       appBar: AppBar(
-        backgroundColor: AppColors.surfaceLight,
+        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimaryLight),
+          icon: Icon(Icons.arrow_back_rounded, color: onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           widget.isRelativeEvent ? 'Sự kiện Người thân' : 'Sự kiện Bản thân',
-          style: AppTextStyles.heading2.copyWith(color: AppColors.textPrimaryLight),
+          style: AppTextStyles.heading2.copyWith(color: onSurface),
         ),
         centerTitle: true,
       ),
@@ -233,7 +236,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (widget.isRelativeEvent) ...[
-              Text('Chọn người thân', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+              Text('Chọn người thân', style: AppTextStyles.heading3.copyWith(color: onSurface)),
               const SizedBox(height: 12),
               _buildRelativeChips(),
               const SizedBox(height: 24),
@@ -245,7 +248,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
               controller: _titleController,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: AppColors.surfaceLight,
+                fillColor: fieldFill,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -264,7 +267,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
             ),
             const SizedBox(height: 24),
 
-            Text('Loại sự kiện', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+            Text('Loại sự kiện', style: AppTextStyles.heading3.copyWith(color: onSurface)),
             const SizedBox(height: 12),
             _buildEventTypeChips(),
             const SizedBox(height: 24),
@@ -282,7 +285,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceLight,
+                            color: fieldFill,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
                           ),
@@ -313,7 +316,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceLight,
+                            color: fieldFill,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: AppColors.textSecondaryLight.withValues(alpha: 0.3)),
                           ),
@@ -325,7 +328,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
                                     ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
                                     : 'Chọn giờ',
                                 style: AppTextStyles.body.copyWith(
-                                  color: _selectedTime != null ? AppColors.textPrimaryLight : AppColors.textSecondaryLight,
+                                  color: _selectedTime != null ? onSurface : AppColors.textSecondaryLight,
                                 ),
                               ),
                               const Icon(Icons.access_time_rounded, size: 20, color: AppColors.primaryLight),
@@ -343,7 +346,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Lặp lại', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+                Text('Lặp lại', style: AppTextStyles.heading3.copyWith(color: onSurface)),
                 Switch(
                   value: _isRecurring,
                   onChanged: (v) => setState(() => _isRecurring = v),
@@ -353,22 +356,22 @@ class _EventFormScreenState extends State<EventFormScreen> {
             ),
             const SizedBox(height: 24),
 
-            Text('Nhắc nhở', style: AppTextStyles.heading3.copyWith(color: AppColors.textPrimaryLight)),
+            Text('Nhắc nhở', style: AppTextStyles.heading3.copyWith(color: onSurface)),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.surfaceLight,
+                color: fieldFill,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE0E0E0)),
+                border: Border.all(color: borderColor),
               ),
               child: Column(
                 children: [
                   _buildReminderToggle('7 ngày trước', _remind7Days, (v) => setState(() => _remind7Days = v)),
-                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                  Divider(height: 1, color: borderColor),
                   _buildReminderToggle('3 ngày trước', _remind3Days, (v) => setState(() => _remind3Days = v)),
-                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                  Divider(height: 1, color: borderColor),
                   _buildReminderToggle('1 ngày trước', _remind1Day, (v) => setState(() => _remind1Day = v)),
-                  const Divider(height: 1, color: Color(0xFFE0E0E0)),
+                  Divider(height: 1, color: borderColor),
                   _buildReminderToggle('1 giờ trước', _remind1Hour, (v) => setState(() => _remind1Hour = v)),
                 ],
               ),
@@ -382,7 +385,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
               maxLines: 3,
               decoration: InputDecoration(
                 filled: true,
-                fillColor: AppColors.surfaceLight,
+                fillColor: fieldFill,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -436,6 +439,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   Widget _buildRelativeChips() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<RelativeProvider>();
     final relatives = provider.relatives;
     
@@ -458,7 +462,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryLight : AppColors.surfaceLight,
+                color: isSelected
+                    ? AppColors.primaryLight
+                    : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
@@ -468,7 +474,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
               child: Text(
                 relative.displayName,
                 style: AppTextStyles.label.copyWith(
-                  color: isSelected ? AppColors.surfaceLight : AppColors.textSecondaryLight,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                 ),
               ),
             ),
@@ -479,6 +487,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   Widget _buildEventTypeChips() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       height: 40,
       child: ListView.builder(
@@ -494,7 +503,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
               margin: const EdgeInsets.only(right: 12),
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryLight : AppColors.surfaceLight,
+                color: isSelected
+                    ? AppColors.primaryLight
+                    : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
@@ -504,7 +515,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
               child: Text(
                 _getEventTypeName(type),
                 style: AppTextStyles.label.copyWith(
-                  color: isSelected ? AppColors.surfaceLight : AppColors.textSecondaryLight,
+                  color: isSelected
+                      ? Colors.white
+                      : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                 ),
               ),
             ),
@@ -515,12 +528,18 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   Widget _buildReminderToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: AppTextStyles.body.copyWith(color: AppColors.textPrimaryLight)),
+          Text(
+            label,
+            style: AppTextStyles.body.copyWith(
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
+          ),
           Switch(
             value: value,
             onChanged: onChanged,
