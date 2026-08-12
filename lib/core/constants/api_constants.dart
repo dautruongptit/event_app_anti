@@ -1,5 +1,6 @@
 class ApiConstants {
   static const String baseUrl = 'https://event.thongtinchinhhieu.site';
+  static const String baseUrlTailscale = 'http://100.101.239.103:8080';
   static const String apiPrefix = '/api/v1';
 
   // Auth
