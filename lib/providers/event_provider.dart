@@ -13,7 +13,7 @@ class EventProvider extends ChangeNotifier {
   List<EventModel> _upcomingEvents = [];
   EventModel? _selectedEvent;
 
-  String? _filterType;
+  int? _filterCategoryId;
   int? _filterRelativeId;
   int? _filterMonth;
   int? _filterYear;
@@ -23,7 +23,7 @@ class EventProvider extends ChangeNotifier {
   List<EventModel> get events => _events;
   List<EventModel> get upcomingEvents => _upcomingEvents;
   EventModel? get selectedEvent => _selectedEvent;
-  String? get filterType => _filterType;
+  int? get filterCategoryId => _filterCategoryId;
   int? get filterRelativeId => _filterRelativeId;
   int? get filterMonth => _filterMonth;
   int? get filterYear => _filterYear;
@@ -32,7 +32,7 @@ class EventProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       _events = await _eventService.getEvents(
-        type: _filterType,
+        categoryId: _filterCategoryId,
         relativeId: _filterRelativeId,
         month: _filterMonth,
         year: _filterYear,
@@ -105,8 +105,8 @@ class EventProvider extends ChangeNotifier {
     }
   }
 
-  void setFilter({String? type, int? relativeId, int? month, int? year}) {
-    _filterType = type;
+  void setFilter({int? categoryId, int? relativeId, int? month, int? year}) {
+    _filterCategoryId = categoryId;
     _filterRelativeId = relativeId;
     _filterMonth = month;
     _filterYear = year;
@@ -115,7 +115,7 @@ class EventProvider extends ChangeNotifier {
   }
 
   void clearFilters() {
-    _filterType = null;
+    _filterCategoryId = null;
     _filterRelativeId = null;
     _filterMonth = null;
     _filterYear = null;

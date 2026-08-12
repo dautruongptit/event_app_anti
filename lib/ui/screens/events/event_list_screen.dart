@@ -258,22 +258,8 @@ class _EventListScreenState extends State<EventListScreen> {
 
   Widget _buildEventCard(BuildContext context, EventModel event) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    Color iconBg;
-    switch (event.eventType) {
-      case 'SINH_NHAT':
-      case 'KY_NIEM':
-        iconBg = AppColors.iconBgPink;
-        break;
-      case 'NHA_O':
-      case 'MUA_SAM':
-        iconBg = AppColors.iconBgTeal;
-        break;
-      case 'HOA_DON':
-        iconBg = AppColors.iconBgYellow;
-        break;
-      default:
-        iconBg = AppColors.bgLight;
-    }
+    final categoryColor = event.categoryColorValue;
+    final iconBg = categoryColor.withValues(alpha: 0.12);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -298,7 +284,7 @@ class _EventListScreenState extends State<EventListScreen> {
             ),
             child: Icon(
               event.eventTypeIcon,
-              color: AppColors.eventTypeColors[event.eventType] ?? AppColors.textSecondaryLight,
+              color: event.categoryColorValue,
             ),
           ),
           const SizedBox(width: 16),

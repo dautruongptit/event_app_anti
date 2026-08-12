@@ -7,13 +7,13 @@ class EventService {
   EventService(this._dio);
 
   Future<List<EventModel>> getEvents({
-    String? type,
+    int? categoryId,
     int? relativeId,
     int? month,
     int? year,
   }) async {
     final queryParams = <String, dynamic>{};
-    if (type != null) queryParams['type'] = type;
+    if (categoryId != null) queryParams['categoryId'] = categoryId;
     if (relativeId != null) queryParams['relativeId'] = relativeId;
     if (month != null) queryParams['month'] = month;
     if (year != null) queryParams['year'] = year;

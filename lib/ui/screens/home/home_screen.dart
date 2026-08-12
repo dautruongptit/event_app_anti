@@ -416,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ...events.asMap().entries.map((entry) {
             final index = entry.key;
             final event = entry.value;
-            final typeColor = AppColors.eventTypeColors[event.eventType] ?? AppColors.secondaryLight;
+            final typeColor = event.categoryColorValue;
             final isNegative = event.daysUntil != null && event.daysUntil! < 0;
             final countColor = isNegative ? AppColors.error : AppColors.secondaryLight;
 

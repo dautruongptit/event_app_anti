@@ -89,7 +89,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       );
     }
 
-    final eventColor = AppColors.eventTypeColors[event.eventType] ?? Colors.grey;
+    final eventColor = event.categoryColorValue;
 
     return Scaffold(
       body: CustomScrollView(

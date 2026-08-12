@@ -26,13 +26,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   int? _selectedRelativeId;
   String? _selectedRelativeName;
-  String _selectedCategory = 'Gia đình';
-  String _selectedCategoryKey = 'GIA_DINH';
+  int _selectedCategoryId = 1;
+  String _selectedCategory = 'Sinh nhật';
+  String _selectedCategoryKey = 'SINH_NHAT';
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime = const TimeOfDay(hour: 14, minute: 0);
   bool _isAllDay = false;
   String _repeatMode = 'Không lặp';
   String _repeatKey = 'NONE';
+  
+  int _lunarDay = 1;
+  int _lunarMonth = 1;
 
   // Nhắc nhở as list of reminder objects
   final List<_ReminderItem> _reminders = [
@@ -42,17 +46,15 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _ReminderItem(label: '1 giờ trước', hoursBefore: 1),
   ];
 
-  // Danh mục list — from Figma screenshot 3
+  // Danh mục list — from DB seed
   static const List<_CategoryItem> _categories = [
-    _CategoryItem(key: 'CA_NHAN', label: 'Cá nhân', icon: Icons.person_outline, color: Color(0xFFF87171)),
-    _CategoryItem(key: 'GIA_DINH', label: 'Gia đình', icon: Icons.people_outline, color: Color(0xFFF87171)),
-    _CategoryItem(key: 'THANH_TOAN', label: 'Thanh toán', icon: Icons.account_balance_wallet_outlined, color: Color(0xFF26A69A)),
-    _CategoryItem(key: 'SUC_KHOE', label: 'Sức khỏe', icon: Icons.favorite_outline, color: Color(0xFF66BB6A)),
-    _CategoryItem(key: 'CONG_VIEC', label: 'Công việc', icon: Icons.work_outline, color: Color(0xFFFFB74D)),
-    _CategoryItem(key: 'HOC_TAP', label: 'Học tập', icon: Icons.school_outlined, color: Color(0xFFEF5350)),
-    _CategoryItem(key: 'PHUONG_TIEN', label: 'Phương tiện', icon: Icons.directions_car_outlined, color: Color(0xFF42A5F5)),
-    _CategoryItem(key: 'DU_LICH', label: 'Du lịch', icon: Icons.flight_outlined, color: Color(0xFFAB47BC)),
-    _CategoryItem(key: 'KHAC', label: 'Khác', icon: Icons.more_horiz, color: Color(0xFF78909C)),
+    _CategoryItem(id: 1, key: 'SINH_NHAT', label: 'Sinh nhật', icon: Icons.cake, color: Color(0xFFFF6B6B)),
+    _CategoryItem(id: 2, key: 'KY_NIEM', label: 'Kỷ niệm', icon: Icons.favorite, color: Color(0xFF9B59B6)),
+    _CategoryItem(id: 3, key: 'LE', label: 'Lễ/Tết', icon: Icons.card_giftcard, color: Color(0xFFF5A623)),
+    _CategoryItem(id: 4, key: 'NHA_O', label: 'Nhà ở', icon: Icons.home, color: Color(0xFFF48FB1)),
+    _CategoryItem(id: 5, key: 'HOA_DON', label: 'Hóa đơn', icon: Icons.bolt, color: Color(0xFFF5C518)),
+    _CategoryItem(id: 6, key: 'MUA_SAM', label: 'Mua sắm', icon: Icons.shopping_bag, color: Color(0xFF1ABC9C)),
+    _CategoryItem(id: 7, key: 'KHAC', label: 'Khác', icon: Icons.more_horiz, color: Color(0xFF95A5A6)),
   ];
 
   static const List<_RepeatOption> _repeatOptions = [
@@ -61,6 +63,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _RepeatOption(key: 'WEEKLY', label: 'Hàng tuần'),
     _RepeatOption(key: 'MONTHLY', label: 'Hàng tháng'),
     _RepeatOption(key: 'YEARLY', label: 'Hàng năm'),
+    _RepeatOption(key: 'LUNAR_YEARLY', label: 'Hàng năm (Âm lịch)'),
     _RepeatOption(key: 'CUSTOM', label: 'Tùy chỉnh'),
   ];
 
@@ -101,7 +104,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
         }
         if (event.isRecurring) {
           _repeatMode = 'Hàng năm';
-          _repeatKey = 'YEARLY';
+          _repeatKey = 'YEARLY'; // TODO: match correct type from event
+        }
+        
+        // Match category from list if possible
+        if (event.categoryId != null) {
+          try {
+            final cat = _categories.firstWhere((c) => c.id == event.categoryId);
+            _selectedCategoryId = cat.id;
+            _selectedCategory = cat.label;
+            _selectedCategoryKey = cat.key;
+          } catch (_) {}
         }
 
         _reminders.clear();
@@ -315,6 +328,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     );
     if (result != null) {
       setState(() {
+        _selectedCategoryId = result.id;
         _selectedCategory = result.label;
         _selectedCategoryKey = result.key;
       });
@@ -405,37 +419,17 @@ class _EventFormScreenState extends State<EventFormScreen> {
       }
     }
 
-    // Map category key to event type for backend
-    String eventType;
-    switch (_selectedCategoryKey) {
-      case 'CA_NHAN':
-        eventType = 'KHAC';
-        break;
-      case 'GIA_DINH':
-        eventType = 'SINH_NHAT';
-        break;
-      case 'THANH_TOAN':
-        eventType = 'HOA_DON';
-        break;
-      case 'SUC_KHOE':
-      case 'CONG_VIEC':
-      case 'HOC_TAP':
-      case 'PHUONG_TIEN':
-      case 'DU_LICH':
-        eventType = 'KHAC';
-        break;
-      default:
-        eventType = 'KHAC';
-    }
-
     final data = {
       'title': _titleController.text.trim(),
-      'eventType': eventType,
+      'categoryId': _selectedCategoryId,
       'eventDate': _selectedDate.toIso8601String().split('T').first,
       'eventTime': (!_isAllDay && _selectedTime != null)
           ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
           : null,
       'isRecurring': _repeatKey != 'NONE',
+      if (_repeatKey != 'NONE') 'recurrenceType': _repeatKey,
+      if (_repeatKey == 'LUNAR_YEARLY') 'lunarDay': _lunarDay,
+      if (_repeatKey == 'LUNAR_YEARLY') 'lunarMonth': _lunarMonth,
       'notes': '',
       'relativeId': _selectedRelativeId,
       'reminders': reminders,
@@ -736,6 +730,61 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   ).animate().fadeIn(delay: 300.ms, duration: 300.ms).slideY(begin: 0.05),
                   const SizedBox(height: 16),
 
+                  if (_repeatKey == 'LUNAR_YEARLY') ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _lunarDay,
+                            decoration: InputDecoration(
+                              labelText: 'Ngày âm',
+                              labelStyle: AppTextStyles.bodySmall.copyWith(color: subText),
+                              filled: true,
+                              fillColor: cardColor,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                            ),
+                            style: AppTextStyles.body.copyWith(color: onSurface),
+                            dropdownColor: cardColor,
+                            items: List.generate(30, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}'))),
+                            onChanged: (v) => setState(() => _lunarDay = v ?? 1),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _lunarMonth,
+                            decoration: InputDecoration(
+                              labelText: 'Tháng âm',
+                              labelStyle: AppTextStyles.bodySmall.copyWith(color: subText),
+                              filled: true,
+                              fillColor: cardColor,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                            ),
+                            style: AppTextStyles.body.copyWith(color: onSurface),
+                            dropdownColor: cardColor,
+                            items: List.generate(12, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}'))),
+                            onChanged: (v) => setState(() => _lunarMonth = v ?? 1),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05),
+                    const SizedBox(height: 16),
+                  ],
+
                   // ── Nhắc nhở Section ──
                   Container(
                     decoration: BoxDecoration(
@@ -934,11 +983,12 @@ class _CategoryPickerScreen extends StatelessWidget {
 // ─── Data Classes ──────────────────────────
 
 class _CategoryItem {
+  final int id;
   final String key;
   final String label;
   final IconData icon;
   final Color color;
-  const _CategoryItem({required this.key, required this.label, required this.icon, required this.color});
+  const _CategoryItem({required this.id, required this.key, required this.label, required this.icon, required this.color});
 }
 
 class _RepeatOption {
