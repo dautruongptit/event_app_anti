@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:event_app/services/auth_service.dart';
 import 'package:event_app/services/user_service.dart';
 import 'package:event_app/core/network/dio_client.dart';
+import 'package:event_app/models/login_history.dart';
 import 'package:event_app/models/user.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -136,6 +137,16 @@ class AuthProvider extends ChangeNotifier {
       _setError(_extractErrorMessage(e));
       return false;
     }
+  }
+
+  /// Lấy lịch sử đăng nhập của chính mình (không đổi state loading chung
+  /// của provider để không ảnh hưởng các màn khác đang lắng nghe).
+  Future<List<LoginHistoryModel>> fetchLoginHistory({
+    int page = 0,
+    int size = 20,
+  }) async {
+    final result = await _authService.getLoginHistory(page: page, size: size);
+    return result['content'] as List<LoginHistoryModel>;
   }
 
   void clearError() {

@@ -8,14 +8,17 @@ class ApiConstants {
   static const String login = '$apiPrefix/auth/login';
   static const String refresh = '$apiPrefix/auth/refresh';
   static const String logout = '$apiPrefix/auth/logout';
-  static const String updateProfile = '$apiPrefix/auth/users/me';
-  static const String updateSettings = '$apiPrefix/auth/users/me/settings';
-  static const String uploadAvatar = '$apiPrefix/auth/users/me/avatar';
-  static const String connectGoogleCalendar =
-      '$apiPrefix/auth/users/me/google-calendar';
 
-  // User
+  // User (đúng theo UserController backend — KHÔNG có prefix /auth)
   static const String userProfile = '$apiPrefix/users/me';
+  static const String updateProfile = '$apiPrefix/users/me';
+  static const String updateSettings = '$apiPrefix/users/me/settings';
+  static const String uploadAvatar = '$apiPrefix/users/me/avatar';
+  static const String loginHistory = '$apiPrefix/users/me/login-history';
+  // ⚠️ Backend chưa có controller cho endpoint này (chỉ có service placeholder,
+  // chưa nối route) — gọi sẽ 404. Giữ lại hằng số để dễ nối khi SEC-31 xong.
+  static const String connectGoogleCalendar =
+      '$apiPrefix/users/me/google-calendar';
 
   // Events
   static const String events = '$apiPrefix/events';

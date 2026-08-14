@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:event_app/core/constants/api_constants.dart';
 import 'package:event_app/core/network/dio_client.dart';
 import 'package:event_app/models/auth_response.dart';
+import 'package:event_app/models/login_history.dart';
 import 'package:event_app/models/user.dart';
 
 class AuthService {
@@ -57,8 +58,38 @@ class AuthService {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(file.path, filename: fileName),
     });
-    final response = await _dio.post(ApiConstants.uploadAvatar, data: formData);
+    // Backend map @PutMapping("/me/avatar") — phải dùng PUT, không phải POST
+    final response = await _dio.put(ApiConstants.uploadAvatar, data: formData);
     return UserProfile.fromJson(response.data['data']);
+  }
+
+  Future<Map<String, dynamic>> getLoginHistory({
+    int page = 0,
+    int size = 20,
+  }) async {
+    final response = await _dio.get(
+      ApiConstants.loginHistory,
+      queryParameters: {'page': page, 'size': size},
+    );
+    final data = response.data['data'];
+    // Backend trả Page<LoginHistoryResponse> -> có field 'content'
+    if (data is Map) {
+      return {
+        'content': (data['content'] as List)
+            .map((e) => LoginHistoryModel.fromJson(e))
+            .toList(),
+        'totalPages': data['totalPages'] as int? ?? 1,
+        'totalElements': data['totalElements'] as int? ?? 0,
+      };
+    }
+    final list = (data as List)
+        .map((e) => LoginHistoryModel.fromJson(e))
+        .toList();
+    return {
+      'content': list,
+      'totalPages': 1,
+      'totalElements': list.length,
+    };
   }
 
   Future<void> connectGoogleCalendar(String code) async {

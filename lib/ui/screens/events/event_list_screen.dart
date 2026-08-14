@@ -110,22 +110,24 @@ class _EventListScreenState extends State<EventListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Sự kiện',
-                      style: AppTextStyles.heading1.copyWith(color: AppColors.surfaceLight),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Quản lý và theo dõi',
-                      style: AppTextStyles.body.copyWith(
-                        color: AppColors.surfaceLight.withValues(alpha: 0.9),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Sự kiện',
+                        style: AppTextStyles.heading1.copyWith(color: AppColors.surfaceLight),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        'Quản lý và theo dõi',
+                        style: AppTextStyles.body.copyWith(
+                          color: AppColors.surfaceLight.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Container(
                   width: 48,
@@ -313,17 +315,23 @@ class _EventListScreenState extends State<EventListScreen> {
                   children: [
                     Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondaryLight),
                     const SizedBox(width: 4),
-                    Text(
-                      AppDateUtils.formatDate(event.eventDate),
-                      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                    Flexible(
+                      child: Text(
+                        AppDateUtils.formatDate(event.eventDate),
+                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     if (event.eventTime != null && event.eventTime!.isNotEmpty) ...[
                       const SizedBox(width: 12),
                       Icon(Icons.access_time_rounded, size: 14, color: AppColors.textSecondaryLight),
                       const SizedBox(width: 4),
-                      Text(
-                        AppDateUtils.formatTime(event.eventTime),
-                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                      Flexible(
+                        child: Text(
+                          AppDateUtils.formatTime(event.eventTime),
+                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ],

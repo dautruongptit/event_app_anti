@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "210357802583",
+    "project_id": "envent-app-22ba3",
+    "storage_bucket": "envent-app-22ba3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:210357802583:android:8cdea73a7626b673623512",
+        "android_client_info": {
+          "package_name": "com.demo.event_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqXif2loBnwsPDc_t7fxrOtcfJJx15UL8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

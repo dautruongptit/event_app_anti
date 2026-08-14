@@ -168,7 +168,7 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
       physics: const NeverScrollableScrollPhysics(),
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: 2.2,
+      childAspectRatio: 1.9,
       children: [
         _buildGroupCard(
           'GIA_DINH',

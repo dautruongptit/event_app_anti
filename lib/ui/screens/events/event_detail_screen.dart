@@ -193,7 +193,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   }
 
   Widget _buildInfoRow(EventModel event, Color eventColor, bool isDark) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         // Date chip
         Container(
@@ -217,7 +219,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             ],
           ),
         ),
-        const SizedBox(width: 8),
         // Time chip
         if (event.eventTime != null && event.eventTime!.isNotEmpty)
           Container(
@@ -238,7 +239,6 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               ],
             ),
           ),
-        const Spacer(),
         // Countdown badge
         if (event.daysUntilText.isNotEmpty)
           Container(

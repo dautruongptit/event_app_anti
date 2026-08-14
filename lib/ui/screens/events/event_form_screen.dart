@@ -548,10 +548,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
                                   'Người liên quan',
                                   style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w500),
                                 ),
-                                const Spacer(),
-                                Text(
-                                  _selectedRelativeName ?? 'Chọn người thân',
-                                  style: AppTextStyles.bodySmall.copyWith(color: subText),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _selectedRelativeName ?? 'Chọn người thân',
+                                    style: AppTextStyles.bodySmall.copyWith(color: subText),
+                                    textAlign: TextAlign.right,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(Icons.chevron_right, color: subText, size: 20),
@@ -574,10 +578,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
                                   'Danh mục',
                                   style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w500),
                                 ),
-                                const Spacer(),
-                                Text(
-                                  _selectedCategory,
-                                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryLight),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _selectedCategory,
+                                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.primaryLight),
+                                    textAlign: TextAlign.right,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(Icons.chevron_right, color: subText, size: 20),
