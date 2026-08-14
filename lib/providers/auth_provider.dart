@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:event_app/services/auth_service.dart';
 import 'package:event_app/services/user_service.dart';
+import 'package:event_app/services/google_auth_helper.dart';
 import 'package:event_app/core/network/dio_client.dart';
 import 'package:event_app/models/login_history.dart';
 import 'package:event_app/models/user.dart';
@@ -11,8 +12,14 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   final UserService _userService;
   final DioClient _dioClient;
+  final GoogleAuthHelper _googleAuthHelper;
 
-  AuthProvider(this._authService, this._userService, this._dioClient);
+  AuthProvider(
+    this._authService,
+    this._userService,
+    this._dioClient, [
+    GoogleAuthHelper? googleAuthHelper,
+  ]) : _googleAuthHelper = googleAuthHelper ?? GoogleAuthHelper();
 
   bool _isLoading = false;
   bool _isAuthenticated = false;
@@ -43,6 +50,34 @@ class AuthProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       final authResponse = await _authService.login(email, password);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('accessToken', authResponse.accessToken);
+      await prefs.setString('refreshToken', authResponse.refreshToken);
+      await prefs.setInt('userId', authResponse.id);
+
+      _isAuthenticated = true;
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setError(_extractErrorMessage(e));
+      return false;
+    }
+  }
+
+  /// Đăng nhập bằng Google. Trả về false + [error] == null nếu người dùng
+  /// chủ động huỷ hộp thoại chọn tài khoản (không phải lỗi thật sự).
+  Future<bool> loginWithGoogle() async {
+    _setLoading(true);
+    try {
+      final idToken = await _googleAuthHelper.signInAndGetIdToken();
+      if (idToken == null) {
+        _isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final authResponse = await _authService.loginWithGoogle(idToken);
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('accessToken', authResponse.accessToken);

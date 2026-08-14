@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../widgets/google_signin_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -22,6 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _confirmController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
 
@@ -62,6 +64,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _registerWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.loginWithGoogle();
+
+      if (!mounted) return;
+
+      if (success) {
+        context.go('/home');
+      } else if (authProvider.error != null) {
+        // error == null nghĩa là người dùng tự huỷ hộp thoại Google, không phải lỗi.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.error ?? 'Đăng ký bằng Google thất bại'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
@@ -147,18 +174,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Text(
-                            'Tham gia ngay',
-                            style: AppTextStyles.body.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          Flexible(
+                            child: Text(
+                              'Tham gia ngay',
+                              style: AppTextStyles.body.copyWith(
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            'Nhắc Sự Kiện',
-                            style: AppTextStyles.subtitle.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          Flexible(
+                            child: Text(
+                              'Nhắc Sự Kiện',
+                              style: AppTextStyles.subtitle.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -320,6 +355,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               style: AppTextStyles.button.copyWith(color: Colors.white),
                             ),
                     ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  OrDivider(
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                  const SizedBox(height: 20),
+                  GoogleSignInButton(
+                    isLoading: _isGoogleLoading,
+                    onPressed: _registerWithGoogle,
                   ),
 
                   const SizedBox(height: 20),

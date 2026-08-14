@@ -15,7 +15,8 @@ class AuthResponse {
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(
-      id: json['id'] as int,
+      // Backend (AuthResponse.java) trả field "userId", không phải "id".
+      id: json['userId'] as int,
       fullName: json['fullName'] as String,
       email: json['email'] as String,
       accessToken: json['accessToken'] as String,

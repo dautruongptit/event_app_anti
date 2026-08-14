@@ -6,6 +6,7 @@ import 'dart:ui';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../providers/auth_provider.dart';
+import '../../widgets/google_signin_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
 
   @override
@@ -54,6 +56,31 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.loginWithGoogle();
+
+      if (!mounted) return;
+
+      if (success) {
+        context.go('/home');
+      } else if (authProvider.error != null) {
+        // error == null nghĩa là người dùng tự huỷ hộp thoại Google, không phải lỗi.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.error ?? 'Đăng nhập Google thất bại'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
     }
   }
 
@@ -183,6 +210,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ),
                                         ),
                                 ),
+                              ),
+                              const SizedBox(height: 20),
+                              const OrDivider(color: Colors.white70),
+                              const SizedBox(height: 20),
+                              GoogleSignInButton(
+                                isLoading: _isGoogleLoading,
+                                onPressed: _loginWithGoogle,
                               ),
                             ],
                           ),

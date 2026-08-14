@@ -66,9 +66,13 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Danh sách',
-                    style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold),
+                  Flexible(
+                    child: Text(
+                      'Danh sách',
+                      style: AppTextStyles.heading3.copyWith(fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.4,

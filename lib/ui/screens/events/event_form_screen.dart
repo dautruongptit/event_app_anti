@@ -728,7 +728,15 @@ class _EventFormScreenState extends State<EventFormScreen> {
                               style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w500),
                             ),
                             const Spacer(),
-                            Text(_repeatMode, style: AppTextStyles.bodySmall.copyWith(color: subText)),
+                            Flexible(
+                              child: Text(
+                                _repeatMode,
+                                style: AppTextStyles.bodySmall.copyWith(color: subText),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
                             const SizedBox(width: 4),
                             Icon(Icons.chevron_right, color: subText, size: 20),
                           ],

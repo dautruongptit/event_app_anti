@@ -240,9 +240,9 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          _buildTabItem('Người thân', 0, isDark),
+          Expanded(child: _buildTabItem('Người thân', 0, isDark)),
           const SizedBox(width: 24),
-          _buildTabItem('Sự kiện của tôi', 1, isDark),
+          Expanded(child: _buildTabItem('Sự kiện của tôi', 1, isDark)),
         ],
       ),
     );
@@ -263,6 +263,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
               fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
           Container(

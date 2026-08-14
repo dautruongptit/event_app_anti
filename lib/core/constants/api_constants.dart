@@ -6,8 +6,15 @@ class ApiConstants {
   // Auth
   static const String register = '$apiPrefix/auth/register';
   static const String login = '$apiPrefix/auth/login';
+  static const String googleLogin = '$apiPrefix/auth/google';
   static const String refresh = '$apiPrefix/auth/refresh';
   static const String logout = '$apiPrefix/auth/logout';
+
+  // ⚠️ OAuth 2.0 Web Client ID lấy từ Google Cloud/Firebase Console
+  // (phải trùng với GOOGLE_CLIENT_ID trong .env của backend, xem
+  // GoogleAuthConfig.java). Điền giá trị thật vào đây trước khi build.
+  static const String googleServerClientId =
+      'REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
 
   // User (đúng theo UserController backend — KHÔNG có prefix /auth)
   static const String userProfile = '$apiPrefix/users/me';

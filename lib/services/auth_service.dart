@@ -27,6 +27,13 @@ class AuthService {
     return AuthResponse.fromJson(response.data['data']);
   }
 
+  Future<AuthResponse> loginWithGoogle(String idToken) async {
+    final response = await _dio.post(ApiConstants.googleLogin, data: {
+      'idToken': idToken,
+    });
+    return AuthResponse.fromJson(response.data['data']);
+  }
+
   Future<AuthResponse> refreshToken(String refreshToken) async {
     final response = await _dio.post(ApiConstants.refresh, data: {
       'refreshToken': refreshToken,
