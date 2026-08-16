@@ -122,7 +122,7 @@ class ProfileScreen extends StatelessWidget {
                       Expanded(
                         child: _buildStatItem(
                           '$days', 
-                          'Ngày', 
+                          'Ngày HL', 
                           isDark,
                         ),
                       ),

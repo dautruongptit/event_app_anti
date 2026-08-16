@@ -7,7 +7,7 @@ import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/event_provider.dart';
 import 'package:event_app/models/event.dart';
 import 'package:event_app/core/utils/date_utils.dart';
-import 'package:event_app/ui/screens/events/event_form_screen.dart';
+
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -346,15 +346,7 @@ class _EventListScreenState extends State<EventListScreen> {
             elevation: 4,
             onSelected: (value) {
               if (value == 'edit') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EventFormScreen(
-                      isRelativeEvent: event.relativeId != null,
-                      eventId: event.id,
-                    ),
-                  ),
-                );
+                context.push('/events/${event.id}/edit');
               } else if (value == 'delete') {
                 _deleteEvent(context, event.id);
               }

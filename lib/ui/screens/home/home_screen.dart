@@ -6,6 +6,7 @@ import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/home_provider.dart';
 import 'package:event_app/providers/auth_provider.dart';
+import 'package:event_app/providers/notification_provider.dart';
 import 'package:event_app/models/event.dart';
 import 'package:event_app/models/relative.dart';
 
@@ -82,14 +83,19 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(12),
+                Badge(
+                  isLabelVisible: context.watch<NotificationProvider>().unreadCount > 0,
+                  label: Text('${context.watch<NotificationProvider>().unreadCount}', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                  backgroundColor: AppColors.error,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.notifications_rounded, color: AppColors.surfaceLight, size: 24),
                   ),
-                  child: const Icon(Icons.notifications_rounded, color: AppColors.surfaceLight, size: 24),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

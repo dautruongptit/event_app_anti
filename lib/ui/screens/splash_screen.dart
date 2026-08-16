@@ -121,7 +121,7 @@ class SplashScreen extends StatelessWidget {
                     _buildFeatureCard(
                       icon: Icons.calendar_month_rounded,
                       iconBg: AppColors.iconBgPurple,
-                      iconColor: const Color(0xFF9C27B0), // Closest to purple, assuming fallback. But rules say ONLY AppColors. I will use textPrimaryDark. Wait, I will use AppColors.accentLight.
+                      iconColor: AppColors.accentDark, // Closest to purple, assuming fallback. But rules say ONLY AppColors. I will use textPrimaryDark. Wait, I will use AppColors.accentLight.
                       title: 'Lịch sự kiện',
                       subtitle: 'Tổng hợp mọi sự kiện cá nhân',
                       isDark: isDark,

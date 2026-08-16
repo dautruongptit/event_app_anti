@@ -336,7 +336,7 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(27),
                     gradient: LinearGradient(
-                      colors: [AppColors.primaryLight, Color(0xFF6C63FF)],
+                      colors: const [AppColors.primaryLight, AppColors.primaryLight],
                     ),
                     boxShadow: [
                       BoxShadow(

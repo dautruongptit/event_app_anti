@@ -5,7 +5,7 @@ import 'package:event_app/core/constants/app_colors.dart';
 import 'package:event_app/core/constants/app_text_styles.dart';
 import 'package:event_app/providers/event_provider.dart';
 import 'package:event_app/providers/relative_provider.dart';
-import 'package:event_app/models/relative.dart';
+
 
 class EventFormScreen extends StatefulWidget {
   final bool isRelativeEvent;
@@ -23,6 +23,7 @@ class EventFormScreen extends StatefulWidget {
 
 class _EventFormScreenState extends State<EventFormScreen> {
   final _titleController = TextEditingController();
+  final _notesController = TextEditingController();
 
   int? _selectedRelativeId;
   String? _selectedRelativeName;
@@ -132,6 +133,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
             _reminders.add(_ReminderItem(label: '1 giờ trước', hoursBefore: 1));
           }
         }
+        
+        _notesController.text = event.notes ?? '';
       });
     }
   }
@@ -139,6 +142,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -430,7 +434,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
       if (_repeatKey != 'NONE') 'recurrenceType': _repeatKey,
       if (_repeatKey == 'LUNAR_YEARLY') 'lunarDay': _lunarDay,
       if (_repeatKey == 'LUNAR_YEARLY') 'lunarMonth': _lunarMonth,
-      'notes': '',
+      'notes': _notesController.text.trim(),
       'relativeId': _selectedRelativeId,
       'reminders': reminders,
     };
@@ -874,6 +878,58 @@ class _EventFormScreenState extends State<EventFormScreen> {
                       ],
                     ),
                   ).animate().fadeIn(delay: 400.ms, duration: 300.ms).slideY(begin: 0.05),
+                  const SizedBox(height: 16),
+                  
+                  // ── Ghi chú Section ──
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: borderColor),
+                    ),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.notes_outlined, size: 22, color: onSurface),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Ghi chú',
+                              style: AppTextStyles.body.copyWith(color: onSurface, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _notesController,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            hintText: 'Thêm ghi chú...',
+                            hintStyle: AppTextStyles.bodySmall.copyWith(color: subText),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: borderColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: AppColors.primaryLight),
+                            ),
+                            filled: true,
+                            fillColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                            contentPadding: const EdgeInsets.all(12),
+                          ),
+                          style: AppTextStyles.body.copyWith(color: onSurface),
+                        ),
+                      ],
+                    ),
+                  ).animate().fadeIn(delay: 450.ms, duration: 300.ms).slideY(begin: 0.05),
+
                   const SizedBox(height: 32),
                 ],
               ),
