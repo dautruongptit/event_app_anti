@@ -14,7 +14,7 @@ class ApiConstants {
   // (phải trùng với GOOGLE_CLIENT_ID trong .env của backend, xem
   // GoogleAuthConfig.java). Điền giá trị thật vào đây trước khi build.
   static const String googleServerClientId =
-      'REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com';
+      '762204384061-n4ngsh81its82lno66tulvtpiu4esume.apps.googleusercontent.com';
 
   // User (đúng theo UserController backend — KHÔNG có prefix /auth)
   static const String userProfile = '$apiPrefix/users/me';
