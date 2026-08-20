@@ -6,9 +6,41 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/theme/theme_provider.dart';
+import '../../providers/auth_provider.dart';
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  bool _isGoogleLoading = false;
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final success = await authProvider.loginWithGoogle();
+
+      if (!mounted) return;
+
+      if (success) {
+        context.go('/home');
+      } else if (authProvider.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authProvider.error ?? 'Đăng nhập bằng Google thất bại'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isGoogleLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,14 +229,7 @@ class SplashScreen extends StatelessWidget {
                     width: double.infinity,
                     height: 52,
                     child: OutlinedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Tính năng đăng nhập Google đang phát triển'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
+                      onPressed: _isGoogleLoading ? null : _loginWithGoogle,
                       style: OutlinedButton.styleFrom(
                         backgroundColor: isDark ? AppColors.cardDark : Colors.white,
                         side: BorderSide(
@@ -217,20 +242,31 @@ class SplashScreen extends StatelessWidget {
                         ),
                         elevation: 0,
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildGoogleIcon(),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Tiếp tục với Google',
-                            style: AppTextStyles.subtitle.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF212121),
+                      child: _isGoogleLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: AppColors.primaryLight,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildGoogleIcon(),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Tiếp tục với Google',
+                                  style: AppTextStyles.subtitle.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark
+                                        ? AppColors.textPrimaryDark
+                                        : const Color(0xFF212121),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
 
