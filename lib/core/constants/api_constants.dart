@@ -10,11 +10,11 @@ class ApiConstants {
   static const String refresh = '$apiPrefix/auth/refresh';
   static const String logout = '$apiPrefix/auth/logout';
 
-  // ⚠️ OAuth 2.0 Web Client ID lấy từ Google Cloud/Firebase Console
-  // (phải trùng với GOOGLE_CLIENT_ID trong .env của backend, xem
-  // GoogleAuthConfig.java). Điền giá trị thật vào đây trước khi build.
+  // OAuth 2.0 Web Client ID — project envent-app-22ba3 (Firebase Console >
+  // Project settings > General > app Android > google-services.json,
+  // oauth_client client_type: 3). Phải trùng GOOGLE_CLIENT_ID backend (.env).
   static const String googleServerClientId =
-      '762204384061-n4ngsh81its82lno66tulvtpiu4esume.apps.googleusercontent.com';
+      '210357802583-eapeoeg41jbba9m152ai6v0hsei04ea7.apps.googleusercontent.com';
 
   // User (đúng theo UserController backend — KHÔNG có prefix /auth)
   static const String userProfile = '$apiPrefix/users/me';
