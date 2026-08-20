@@ -18,9 +18,9 @@ class SplashScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
+            // Top Bar with Theme Toggle
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
@@ -28,13 +28,15 @@ class SplashScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.3) : AppColors.textSecondaryLight.withValues(alpha: 0.3),
+                        color: isDark
+                            ? AppColors.textSecondaryDark.withValues(alpha: 0.3)
+                            : AppColors.textSecondaryLight.withValues(alpha: 0.2),
                       ),
                     ),
                     child: IconButton(
                       icon: Icon(
                         isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                        color: isDark ? AppColors.textPrimaryDark : AppColors.primaryLight,
                       ),
                       onPressed: () => context.read<ThemeProvider>().toggleTheme(),
                     ),
@@ -48,180 +50,291 @@ class SplashScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    const SizedBox(height: 20),
-                    // Logo Icon
+                    const SizedBox(height: 8),
+
+                    // NINO Logo Container
                     Container(
-                      width: 100,
-                      height: 100,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
-                        gradient: AppColors.accentGradient,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFF87171), Color(0xFF4DB6AC)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primaryLight.withValues(alpha: 0.3),
+                            color: AppColors.primaryLight.withValues(alpha: 0.25),
                             blurRadius: 20,
-                            offset: const Offset(0, 10),
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.notifications_active_rounded,
-                        size: 50,
-                        color: Colors.white,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Icon(Icons.person_rounded, size: 38, color: Colors.white),
+                              SizedBox(width: 2),
+                              Icon(Icons.person_rounded, size: 38, color: Colors.white),
+                            ],
+                          ),
+                          Positioned(
+                            top: 48,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.favorite_rounded,
+                                size: 14,
+                                color: Color(0xFFF87171),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Title
-                    Text(
-                      'Nhắc Sự Kiện',
-                      style: AppTextStyles.heading1.copyWith(
-                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                        fontSize: 28,
+                    ).animate().scale(duration: 500.ms, curve: Curves.easeOutBack),
+
+                    const SizedBox(height: 16),
+
+                    // N I N O Title
+                    RichText(
+                      text: TextSpan(
+                        style: AppTextStyles.heading1.copyWith(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 4.0,
+                        ),
+                        children: const [
+                          TextSpan(text: 'N', style: TextStyle(color: Color(0xFFF87171))),
+                          TextSpan(text: ' I ', style: TextStyle(color: Color(0xFFF87171))),
+                          TextSpan(text: 'N', style: TextStyle(color: Color(0xFF26A69A))),
+                          TextSpan(text: 'O', style: TextStyle(color: Color(0xFF26A69A))),
+                        ],
                       ),
                     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // Subtitle
+
+                    const SizedBox(height: 4),
+
+                    // Sub-tagline
                     Text(
-                      'Ứng dụng nhắc nhở thông minh — không bao giờ bỏ lỡ những khoảnh khắc quan trọng bên người thân',
+                      'NEVER IGNORE NEAR ONES',
+                      style: AppTextStyles.caption.copyWith(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        fontSize: 10,
+                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ).animate().fadeIn(delay: 250.ms),
+
+                    const SizedBox(height: 16),
+
+                    // Description text
+                    Text(
+                      'Đồng hành ngày & đêm — không bao giờ\nđể lỡ những khoảnh khắc bên\nngười thân',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.body.copyWith(
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        color: isDark ? AppColors.textSecondaryDark : const Color(0xFF757575),
+                        height: 1.4,
                       ),
                     ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 32),
 
-                    // Feature Cards
+                    // 3 Feature Cards
                     _buildFeatureCard(
-                      icon: Icons.notifications_active_rounded,
-                      iconBg: AppColors.iconBgPink,
-                      iconColor: AppColors.primaryLight,
+                      icon: Icons.notifications_none_rounded,
+                      iconBg: const Color(0xFFFFEBEE),
+                      iconColor: const Color(0xFFF87171),
                       title: 'Nhắc nhở thông minh',
                       subtitle: 'Không bỏ lỡ ngày quan trọng',
                       isDark: isDark,
-                    ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.2),
-                    
-                    const SizedBox(height: 16),
-                    
+                    ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1),
+
+                    const SizedBox(height: 12),
+
                     _buildFeatureCard(
-                      icon: Icons.people_alt_rounded,
-                      iconBg: AppColors.iconBgTeal,
-                      iconColor: AppColors.secondaryLight,
+                      icon: Icons.people_outline_rounded,
+                      iconBg: const Color(0xFFE0F2F1),
+                      iconColor: const Color(0xFF26A69A),
                       title: 'Quản lý người thân',
-                      subtitle: 'Theo dõi sinh nhật & kỷ niệm',
+                      subtitle: 'Sinh nhật & kỷ niệm mọi người',
                       isDark: isDark,
-                    ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.2),
-                    
-                    const SizedBox(height: 16),
-                    
+                    ).animate().fadeIn(delay: 500.ms).slideX(begin: 0.1),
+
+                    const SizedBox(height: 12),
+
                     _buildFeatureCard(
-                      icon: Icons.calendar_month_rounded,
-                      iconBg: AppColors.iconBgPurple,
-                      iconColor: AppColors.accentDark, // Closest to purple, assuming fallback. But rules say ONLY AppColors. I will use textPrimaryDark. Wait, I will use AppColors.accentLight.
+                      icon: Icons.calendar_today_rounded,
+                      iconBg: const Color(0xFFF3E5F5),
+                      iconColor: const Color(0xFFAB47BC),
                       title: 'Lịch sự kiện',
                       subtitle: 'Tổng hợp mọi sự kiện cá nhân',
                       isDark: isDark,
-                    ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.2),
+                    ).animate().fadeIn(delay: 600.ms).slideX(begin: 0.1),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
 
             // Bottom Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              margin: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.cardDark : AppColors.textSecondaryLight.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ElevatedButton(
-                    onPressed: () => context.go('/login'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-                      foregroundColor: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Button: Tiếp tục với Google
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Tính năng đăng nhập Google đang phát triển'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: isDark ? AppColors.cardDark : Colors.white,
                         side: BorderSide(
-                          color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.3) : AppColors.textSecondaryLight.withValues(alpha: 0.3),
+                          color: isDark
+                              ? AppColors.textSecondaryDark.withValues(alpha: 0.2)
+                              : const Color(0xFFE0E0E0),
                         ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildGoogleIcon(),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Tiếp tục với Google',
+                            style: AppTextStyles.subtitle.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.textPrimaryDark : const Color(0xFF212121),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.login_rounded, size: 24),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Đăng nhập',
-                          style: AppTextStyles.button,
-                        ),
-                      ],
-                    ),
                   ),
-                  
+
+                  // Divider: hoặc
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                     child: Row(
                       children: [
-                        Expanded(child: Divider(color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.3) : AppColors.textSecondaryLight.withValues(alpha: 0.3))),
+                        Expanded(
+                          child: Divider(
+                            color: isDark
+                                ? AppColors.textSecondaryDark.withValues(alpha: 0.2)
+                                : const Color(0xFFEEEEEE),
+                          ),
+                        ),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
                             'hoặc',
                             style: AppTextStyles.bodySmall.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                             ),
                           ),
                         ),
-                        Expanded(child: Divider(color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.3) : AppColors.textSecondaryLight.withValues(alpha: 0.3))),
+                        Expanded(
+                          child: Divider(
+                            color: isDark
+                                ? AppColors.textSecondaryDark.withValues(alpha: 0.2)
+                                : const Color(0xFFEEEEEE),
+                          ),
+                        ),
                       ],
                     ),
                   ),
 
-                  // Dashed border button workaround (using OutlinedButton as Flutter doesn't have native dashed border without external packages)
-                  OutlinedButton(
-                    onPressed: () => context.go('/register'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryLight,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: AppColors.primaryLight, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  // Button: Tạo tài khoản mới → (Dashed Border style)
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: CustomPaint(
+                      painter: DashedRectPainter(
+                        color: const Color(0xFFF87171),
+                        strokeWidth: 1.5,
+                        gap: 4.0,
+                        radius: 16,
+                      ),
+                      child: TextButton(
+                        onPressed: () => context.go('/register'),
+                        style: TextButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Tạo tài khoản mới',
+                              style: AppTextStyles.subtitle.copyWith(
+                                color: const Color(0xFFF87171),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 18,
+                              color: Color(0xFFF87171),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Tạo tài khoản mới →',
-                          style: AppTextStyles.button,
-                        ),
-                      ],
-                    ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
-                  Text(
-                    'Bằng cách tiếp tục, bạn đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của chúng tôi.',
+
+                  // Footer terms text
+                  RichText(
                     textAlign: TextAlign.center,
-                    style: AppTextStyles.caption.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    text: TextSpan(
+                      style: AppTextStyles.caption.copyWith(
+                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        height: 1.4,
+                      ),
+                      children: const [
+                        TextSpan(text: 'Bằng cách tiếp tục, bạn đồng ý với '),
+                        TextSpan(
+                          text: 'Điều khoản dịch vụ',
+                          style: TextStyle(color: Color(0xFFF87171)),
+                        ),
+                        TextSpan(text: ' và '),
+                        TextSpan(
+                          text: 'Chính sách bảo mật',
+                          style: TextStyle(color: Color(0xFFF87171)),
+                        ),
+                        TextSpan(text: '.'),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ).animate().fadeIn(delay: 800.ms).slideY(begin: 0.2),
+            ).animate().fadeIn(delay: 700.ms).slideY(begin: 0.1),
           ],
         ),
       ),
@@ -237,25 +350,36 @@ class SplashScreen extends StatelessWidget {
     required bool isDark,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
+        color: isDark ? AppColors.cardDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? AppColors.textSecondaryDark.withValues(alpha: 0.1) : AppColors.textSecondaryLight.withValues(alpha: 0.2),
+          color: isDark
+              ? AppColors.textSecondaryDark.withValues(alpha: 0.1)
+              : const Color(0xFFF0F0F0),
         ),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: iconBg,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: iconColor),
+            child: Icon(icon, color: iconColor, size: 22),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,26 +388,136 @@ class SplashScreen extends StatelessWidget {
                   title,
                   style: AppTextStyles.subtitle.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    fontSize: 15,
+                    color: isDark ? AppColors.textPrimaryDark : const Color(0xFF212121),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark ? AppColors.textSecondaryDark : const Color(0xFF888888),
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
           Icon(
-            Icons.auto_awesome_rounded,
-            color: AppColors.warning,
-            size: 20,
+            Icons.auto_awesome_outlined,
+            color: isDark ? Colors.white24 : const Color(0xFFD0D0D0),
+            size: 18,
           ),
         ],
       ),
     );
   }
+
+  Widget _buildGoogleIcon() {
+    return Container(
+      width: 22,
+      height: 22,
+      alignment: Alignment.center,
+      child: CustomPaint(
+        size: const Size(22, 22),
+        painter: GoogleLogoPainter(),
+      ),
+    );
+  }
+}
+
+// Custom Dashed Border Painter
+class DashedRectPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double radius;
+
+  DashedRectPainter({
+    required this.color,
+    this.strokeWidth = 1.5,
+    this.gap = 4.0,
+    this.radius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final RRect rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    );
+
+    final Path path = Path()..addRRect(rrect);
+    final Path dashPath = Path();
+
+    for (final PathMetric pathMetric in path.computeMetrics()) {
+      double distance = 0.0;
+      bool draw = true;
+      while (distance < pathMetric.length) {
+        final double length = draw ? 6.0 : gap;
+        if (draw) {
+          dashPath.addPath(
+            pathMetric.extractPath(distance, distance + length),
+            Offset.zero,
+          );
+        }
+        distance += length;
+        draw = !draw;
+      }
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant DashedRectPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.gap != gap ||
+        oldDelegate.radius != radius;
+  }
+}
+
+// Google Logo Painter for clean rendering without external asset dependencies
+class GoogleLogoPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+
+    // Blue
+    final Paint bluePaint = Paint()..color = const Color(0xFF4285F4);
+    // Green
+    final Paint greenPaint = Paint()..color = const Color(0xFF34A853);
+    // Yellow
+    final Paint yellowPaint = Paint()..color = const Color(0xFFFBBC05);
+    // Red
+    final Paint redPaint = Paint()..color = const Color(0xFFEA4335);
+
+    final Offset center = Offset(w / 2, h / 2);
+    final double radius = w / 2;
+
+    // Draw G shapes
+    final Rect rect = Rect.fromCircle(center: center, radius: radius);
+
+    canvas.drawArc(rect, -0.4, 1.8, true, bluePaint);
+    canvas.drawArc(rect, 1.4, 1.3, true, greenPaint);
+    canvas.drawArc(rect, 2.7, 0.9, true, yellowPaint);
+    canvas.drawArc(rect, 3.6, 1.1, true, redPaint);
+
+    // Inner circle cutout
+    final Paint bgPaint = Paint()..color = Colors.white;
+    canvas.drawCircle(center, radius * 0.58, bgPaint);
+
+    // Right bar for G
+    final Rect barRect = Rect.fromLTWH(w * 0.45, h * 0.38, w * 0.52, h * 0.24);
+    canvas.drawRect(barRect, bluePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
