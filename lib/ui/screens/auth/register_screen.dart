@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/theme/theme_provider.dart';
 import '../../../providers/auth_provider.dart';
+import '../../widgets/google_logo.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -497,11 +498,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                           color: Colors.white,
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(
-                                          Icons.g_mobiledata_rounded,
-                                          size: 20,
-                                          color: Color(0xFF4285F4),
-                                        ),
+                                        child: const GoogleLogo(size: 20),
                                       ),
                                       const SizedBox(width: 10),
                                       Text(
