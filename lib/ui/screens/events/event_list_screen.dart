@@ -263,7 +263,9 @@ class _EventListScreenState extends State<EventListScreen> {
     final categoryColor = event.categoryColorValue;
     final iconBg = categoryColor.withValues(alpha: 0.12);
 
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/events/${event.id}'),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -375,6 +377,7 @@ class _EventListScreenState extends State<EventListScreen> {
             ],
           ),
         ],
+      ),
       ),
     );
   }
