@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_text_styles.dart';
+import 'google_logo.dart';
 
 /// Nút "Đăng nhập bằng Google" dùng chung cho Login & Register screen.
-/// Icon G dùng Icons.g_mobiledata_rounded làm placeholder (chưa có asset G
-/// đa sắc chính thức trong dự án) — có thể thay bằng ảnh SVG sau này.
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,
@@ -37,12 +36,8 @@ class GoogleSignInButton extends StatelessWidget {
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.g_mobiledata_rounded,
-                    size: 28,
-                    color: Color(0xFF4285F4),
-                  ),
-                  const SizedBox(width: 8),
+                  const GoogleLogo(size: 22),
+                  const SizedBox(width: 10),
                   Text(
                     'Đăng nhập với Google',
                     style: AppTextStyles.button.copyWith(

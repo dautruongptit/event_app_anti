@@ -26,6 +26,7 @@ class DioClient {
           ApiConstants.login,
           ApiConstants.register,
           ApiConstants.refresh,
+          ApiConstants.googleLogin,
         ];
 
         if (!skipAuthRoutes.contains(options.path)) {

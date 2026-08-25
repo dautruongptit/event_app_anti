@@ -7,6 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/theme/theme_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../widgets/google_logo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -451,15 +452,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Widget _buildGoogleIcon() {
-    return Container(
-      width: 22,
-      height: 22,
-      alignment: Alignment.center,
-      child: CustomPaint(
-        size: const Size(22, 22),
-        painter: GoogleLogoPainter(),
-      ),
-    );
+    return const GoogleLogo(size: 22);
   }
 }
 
@@ -517,44 +510,4 @@ class DashedRectPainter extends CustomPainter {
         oldDelegate.gap != gap ||
         oldDelegate.radius != radius;
   }
-}
-
-// Google Logo Painter for clean rendering without external asset dependencies
-class GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width;
-    final double h = size.height;
-
-    // Blue
-    final Paint bluePaint = Paint()..color = const Color(0xFF4285F4);
-    // Green
-    final Paint greenPaint = Paint()..color = const Color(0xFF34A853);
-    // Yellow
-    final Paint yellowPaint = Paint()..color = const Color(0xFFFBBC05);
-    // Red
-    final Paint redPaint = Paint()..color = const Color(0xFFEA4335);
-
-    final Offset center = Offset(w / 2, h / 2);
-    final double radius = w / 2;
-
-    // Draw G shapes
-    final Rect rect = Rect.fromCircle(center: center, radius: radius);
-
-    canvas.drawArc(rect, -0.4, 1.8, true, bluePaint);
-    canvas.drawArc(rect, 1.4, 1.3, true, greenPaint);
-    canvas.drawArc(rect, 2.7, 0.9, true, yellowPaint);
-    canvas.drawArc(rect, 3.6, 1.1, true, redPaint);
-
-    // Inner circle cutout
-    final Paint bgPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(center, radius * 0.58, bgPaint);
-
-    // Right bar for G
-    final Rect barRect = Rect.fromLTWH(w * 0.45, h * 0.38, w * 0.52, h * 0.24);
-    canvas.drawRect(barRect, bluePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
