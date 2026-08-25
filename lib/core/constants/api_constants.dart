@@ -42,6 +42,9 @@ class ApiConstants {
   static String markAsRead(int id) => '$apiPrefix/notifications/$id/read';
   static const String markAllAsRead = '$apiPrefix/notifications/read-all';
 
+  // Devices (đăng ký FCM token — xem DeviceController.java backend)
+  static const String devices = '$apiPrefix/users/me/devices';
+
   // Relatives
   static const String relatives = '$apiPrefix/relatives';
   static const String relativeGroups = '$apiPrefix/relatives/groups';

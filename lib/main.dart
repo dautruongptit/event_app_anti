@@ -17,6 +17,8 @@ import 'services/home_service.dart';
 import 'services/event_service.dart';
 import 'services/relative_service.dart';
 import 'services/notification_service.dart';
+import 'services/device_service.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +32,11 @@ void main() async {
   final eventService = EventService(dioClient);
   final relativeService = RelativeService(dioClient);
   final notificationService = NotificationService(dioClient);
+  final deviceService = DeviceService(dioClient);
+  final fcmService = FcmService(deviceService);
+  // Phải init trước runApp: đăng ký background handler của FCM chỉ có tác
+  // dụng nếu gọi trước khi app thực sự chạy.
+  await fcmService.init();
 
   runApp(
     MultiProvider(
@@ -39,7 +46,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
         ChangeNotifierProvider(create: (_) => LocaleProvider()..loadSavedLocale()),
         ChangeNotifierProvider(
-          create: (_) => AuthProvider(authService, userService, dioClient),
+          create: (_) => AuthProvider(authService, userService, dioClient, null, fcmService),
         ),
         ChangeNotifierProvider(create: (_) => HomeProvider(homeService)),
         ChangeNotifierProvider(create: (_) => EventProvider(eventService)),
