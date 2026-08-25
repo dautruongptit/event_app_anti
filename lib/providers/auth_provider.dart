@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:event_app/services/auth_service.dart';
 import 'package:event_app/services/user_service.dart';
 import 'package:event_app/services/google_auth_helper.dart';
+import 'package:event_app/services/fcm_service.dart';
 import 'package:event_app/core/network/dio_client.dart';
 import 'package:event_app/models/login_history.dart';
 import 'package:event_app/models/user.dart';
@@ -13,13 +14,16 @@ class AuthProvider extends ChangeNotifier {
   final UserService _userService;
   final DioClient _dioClient;
   final GoogleAuthHelper _googleAuthHelper;
+  final FcmService? _fcmService;
 
   AuthProvider(
     this._authService,
     this._userService,
     this._dioClient, [
     GoogleAuthHelper? googleAuthHelper,
-  ]) : _googleAuthHelper = googleAuthHelper ?? GoogleAuthHelper();
+    FcmService? fcmService,
+  ])  : _googleAuthHelper = googleAuthHelper ?? GoogleAuthHelper(),
+        _fcmService = fcmService;
 
   bool _isLoading = false;
   bool _isAuthenticated = false;
@@ -58,6 +62,9 @@ class AuthProvider extends ChangeNotifier {
 
       _isAuthenticated = true;
       await _loadProfileSilently();
+      // Không await: xin quyền notification + đăng ký FCM token không được
+      // làm chậm/chặn luồng login đã thành công.
+      _fcmService?.registerForCurrentUser();
       _setLoading(false);
       return true;
     } catch (e) {
@@ -87,6 +94,9 @@ class AuthProvider extends ChangeNotifier {
 
       _isAuthenticated = true;
       await _loadProfileSilently();
+      // Không await: xin quyền notification + đăng ký FCM token không được
+      // làm chậm/chặn luồng login đã thành công.
+      _fcmService?.registerForCurrentUser();
       _setLoading(false);
       return true;
     } catch (e) {
@@ -107,6 +117,9 @@ class AuthProvider extends ChangeNotifier {
 
       _isAuthenticated = true;
       await _loadProfileSilently();
+      // Không await: xin quyền notification + đăng ký FCM token không được
+      // làm chậm/chặn luồng login đã thành công.
+      _fcmService?.registerForCurrentUser();
       _setLoading(false);
       return true;
     } catch (e) {
@@ -116,6 +129,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await _fcmService?.unregisterCurrentDevice();
     try {
       await _authService.logout();
     } catch (_) {}

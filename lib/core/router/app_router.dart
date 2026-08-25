@@ -23,6 +23,10 @@ import '../../ui/widgets/bottom_nav_scaffold.dart';
 class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 
+  /// Cho phép điều hướng từ nơi không có BuildContext (vd: callback của
+  /// FirebaseMessaging khi user bấm vào push notification).
+  static GlobalKey<NavigatorState> get navigatorKey => _rootNavigatorKey;
+
   static GoRouter createRouter() {
     return GoRouter(
       navigatorKey: _rootNavigatorKey,

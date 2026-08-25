@@ -144,9 +144,9 @@ class DioClient {
     }
   }
 
-  Future<Response> delete(String url) async {
+  Future<Response> delete(String url, {dynamic data}) async {
     try {
-      return await _dio.delete(url);
+      return await _dio.delete(url, data: data);
     } catch (e) {
       rethrow;
     }
