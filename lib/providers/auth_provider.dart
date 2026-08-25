@@ -57,6 +57,7 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setInt('userId', authResponse.id);
 
       _isAuthenticated = true;
+      await _loadProfileSilently();
       _setLoading(false);
       return true;
     } catch (e) {
@@ -85,6 +86,7 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setInt('userId', authResponse.id);
 
       _isAuthenticated = true;
+      await _loadProfileSilently();
       _setLoading(false);
       return true;
     } catch (e) {
@@ -104,6 +106,7 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setInt('userId', authResponse.id);
 
       _isAuthenticated = true;
+      await _loadProfileSilently();
       _setLoading(false);
       return true;
     } catch (e) {
@@ -132,6 +135,18 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
     } catch (e) {
       _setError(_extractErrorMessage(e));
+    }
+  }
+
+  /// Tải profile ngay sau khi login/register/loginWithGoogle thành công, để
+  /// Home có tên hiển thị ngay (tránh rơi về "Khách") mà không cần màn sau
+  /// gọi loadProfile() riêng. Lỗi ở đây bị nuốt có chủ đích — accessToken
+  /// đã lưu xong nên login vẫn tính là thành công dù bước này fail.
+  Future<void> _loadProfileSilently() async {
+    try {
+      _user = await _userService.getProfile();
+    } catch (_) {
+      // Bỏ qua — không chặn luồng login đã thành công.
     }
   }
 
