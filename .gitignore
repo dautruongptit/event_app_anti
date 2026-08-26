@@ -89,3 +89,6 @@ app.*.map.json
 # Environment
 .env
 .env.*
+
+# Superpowers brainstorming visual companion (mockups, session state)
+.superpowers/
