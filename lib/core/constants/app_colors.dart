@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Primary palette — Coral/Salmon (from Figma)
-  static const Color primaryLight = Color(0xFFF87171);
-  static const Color primaryDark = Color(0xFFEF5350);
+  // Primary palette — Zalo-blue
+  static const Color primaryLight = Color(0xFF0068FF);
+  static const Color primaryDark = Color(0xFF4C9AFF);
 
-  // Secondary — Teal/Mint
-  static const Color secondaryLight = Color(0xFF26A69A);
-  static const Color secondaryDark = Color(0xFF4DB6AC);
+  // Secondary — Teal-cyan (hài hoà với xanh dương)
+  static const Color secondaryLight = Color(0xFF00A3B8);
+  static const Color secondaryDark = Color(0xFF26C6DA);
 
-  // Accent — Pink
-  static const Color accentLight = Color(0xFFFD79A8);
-  static const Color accentDark = Color(0xFFE84393);
+  // Accent — dùng lại primary để nhất quán/phẳng (bỏ hue thứ 3)
+  static const Color accentLight = Color(0xFF0068FF);
+  static const Color accentDark = Color(0xFF4C9AFF);
 
   // Backgrounds
-  static const Color bgLight = Color(0xFFFFF8F8);
+  static const Color bgLight = Color(0xFFF5F8FC);
   static const Color bgDark = Color(0xFF0D1117);
 
   // Surfaces
@@ -44,27 +44,29 @@ class AppColors {
   static const Color iconBgOrange = Color(0xFFFFF3E0);
   static const Color iconBgYellow = Color(0xFFFFF8E1);
 
-  // Gradients — Figma header gradient (coral → teal)
+  // Gradients — phẳng (2 điểm dừng cùng màu) theo phong cách Zalo-blue.
+  // Giữ nguyên shape LinearGradient (colors/begin/end) để không phải sửa
+  // từng widget đang dùng `gradient:` — chỉ đổi giá trị màu.
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [Color(0xFFF87171), Color(0xFFEF5350)],
+    colors: [Color(0xFF0068FF), Color(0xFF0068FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient headerGradient = LinearGradient(
-    colors: [Color(0xFFF87171), Color(0xFFEF9A9A), Color(0xFF80CBC4), Color(0xFF26A69A)],
+    colors: [Color(0xFF0068FF), Color(0xFF0068FF)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
 
   static const LinearGradient tealGradient = LinearGradient(
-    colors: [Color(0xFF26A69A), Color(0xFF4DB6AC)],
+    colors: [Color(0xFF00A3B8), Color(0xFF00A3B8)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const LinearGradient accentGradient = LinearGradient(
-    colors: [Color(0xFFF87171), Color(0xFF26A69A)],
+    colors: [Color(0xFF0068FF), Color(0xFF0068FF)],
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
   );
@@ -75,7 +77,8 @@ class AppColors {
     end: Alignment.bottomCenter,
   );
 
-  // Event type colors (from Figma)
+  // Event type colors (from Figma) — giữ nguyên, màu chức năng phân loại,
+  // không phải màu thương hiệu.
   static const Map<String, Color> eventTypeColors = {
     'SINH_NHAT': Color(0xFFF87171),
     'KY_NIEM': Color(0xFFF87171),
@@ -86,7 +89,7 @@ class AppColors {
     'KHAC': Color(0xFF9E9E9E),
   };
 
-  // Group type colors
+  // Group type colors — giữ nguyên
   static const Map<String, Color> groupTypeColors = {
     'GIA_DINH': Color(0xFFF87171),
     'VO_CHONG': Color(0xFF26A69A),
