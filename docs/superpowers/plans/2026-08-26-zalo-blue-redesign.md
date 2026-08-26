@@ -361,3 +361,16 @@ Summarize, screen by screen, pass/fail against the checklist in Step 2. For any 
 
 - Task 1 is the only task that changes code; Tasks 2–4 are verification and produce a report, not commits (unless Task 1's commit needs a follow-up fix, in which case treat that as a new Task 1b with its own test-fix-verify-commit cycle).
 - If Task 2's checklist fails because of an old hard-coded color literal (not a full AppColors token), fix that literal in a small follow-up commit, re-run Task 1's test suite plus `flutter analyze`, and re-screenshot before moving on — don't silently patch and move on without re-verifying.
+
+## Execution Log (2026-08-26)
+
+- **Task 1** — done, committed (`2a1ea73`). `flutter test test/core/app_colors_test.dart`: 7/7 pass. `flutter analyze`: 49 pre-existing info/warnings, no new errors.
+- **Task 2** — done. Home light mode confirmed against checklist: solid blue `#0068FF` header, blue tab/bottom-nav accents, legible text. One deviation from the approved mockup noted below (not a token bug).
+- **Task 3** — done. Home dark mode confirmed: dark background unchanged, blue accents legible (see note below on which shade).
+- **Task 4** — partial. Screens checked and **passed**: Home (light+dark), Profile, Event List, Event Detail, Event Form, Relative List, Relative Detail, Login (email/password screen). Screens **not reached**: Notifications, Settings, Login History, Event Type Selection — blocked by ADB text-input flakiness while re-establishing a session after logout, not attempted further to avoid burning effort on tooling friction; recommend a quick manual spot-check in Phase 2.
+
+### Findings for follow-up (not fixed in this plan, per Task 4's scope note)
+
+1. **Splash screen (`splash_screen.dart`) and Register screen (`register_screen.dart`) still show the old coral/teal branding** — logo icon gradient, "NINO" wordmark, radio buttons, the "Đăng ký với Google" gradient button, dashed "Tạo tài khoản mới" border/text, and several icon accents are all hard-coded `Color(0xFFF87171)` / `Color(0xFF26A69A)` literals, bypassing `AppColors` entirely. This is the **first screen every user sees**, so it's the most visible gap left by this phase. Candidate for a dedicated Phase 2 task (or doing it now, if the user prefers).
+2. `home_screen.dart`'s `Scaffold.backgroundColor` uses `AppColors.surfaceLight` (white), not `AppColors.bgLight` (the new soft blue-gray) — a pre-existing choice, not something this phase's token-only change could reach. The approved mockup showed a blue-gray body background; currently Home's body renders white instead. Small one-line fix if wanted.
+3. Two decorative elements (the bell icon square on Home's header, and some tab-active text) reference `AppColors.primaryGradient`/`primaryLight` directly rather than a dark-mode-aware conditional, so they render the same `#0068FF` in both light and dark mode instead of switching to `#4C9AFF` in dark mode. This matches **pre-existing** behavior (same non-theme-aware pattern existed before this phase, just with the old coral), so it's not a regression — just an existing inconsistency inherited as-is.
