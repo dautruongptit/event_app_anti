@@ -7,8 +7,27 @@ import 'package:event_app/providers/auth_provider.dart';
 import 'package:event_app/providers/notification_provider.dart';
 import 'package:event_app/core/theme/theme_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Phiên đăng nhập khôi phục từ session cũ (không phải vừa login/register)
+      // không tự tải profile — nếu không tải lại ở đây, màn này sẽ mãi hiện
+      // placeholder "Người dùng"/"email@example.com" dù đã đăng nhập.
+      final authProvider = context.read<AuthProvider>();
+      if (authProvider.user == null) {
+        authProvider.loadProfile();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

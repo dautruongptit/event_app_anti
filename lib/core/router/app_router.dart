@@ -42,7 +42,9 @@ class AppRouter {
           return '/login';
         }
 
-        if (isLoggedIn && isAuthRoute) {
+        // Đã đăng nhập (kể cả phiên cũ khôi phục lại) mà đang ở màn splash/
+        // login/register -> vào thẳng Home, không kẹt lại màn quảng cáo.
+        if (isLoggedIn && (isAuthRoute || isSplashRoute)) {
           return '/home';
         }
 
