@@ -145,7 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           height: 56,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFF87171), Color(0xFF4DB6AC)],
+                              colors: [AppColors.primaryLight, AppColors.secondaryDark],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
@@ -179,7 +179,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   child: const Icon(
                                     Icons.favorite_rounded,
                                     size: 10,
-                                    color: Color(0xFFF87171),
+                                    color: AppColors.primaryLight,
                                   ),
                                 ),
                               ),
@@ -216,11 +216,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                     TextSpan(
                                       text: 'NI',
-                                      style: TextStyle(color: Color(0xFFF87171)),
+                                      style: TextStyle(color: AppColors.primaryLight),
                                     ),
                                     TextSpan(
                                       text: 'NO',
-                                      style: TextStyle(color: Color(0xFF26A69A)),
+                                      style: TextStyle(color: AppColors.secondaryLight),
                                     ),
                                   ],
                                 ),
@@ -277,11 +277,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   TextSpan(text: 'Ý nghĩa của '),
                                   TextSpan(
                                     text: 'NI',
-                                    style: TextStyle(color: Color(0xFFF87171), fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold),
                                   ),
                                   TextSpan(
                                     text: 'NO',
-                                    style: TextStyle(color: Color(0xFF26A69A), fontWeight: FontWeight.bold),
+                                    style: TextStyle(color: AppColors.secondaryLight, fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -314,7 +314,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                             shape: BoxShape.circle,
                                             border: Border.all(
                                               color: isSelected
-                                                  ? const Color(0xFFF87171)
+                                                  ? AppColors.primaryLight
                                                   : const Color(0xFFCCCCCC),
                                               width: isSelected ? 6 : 1.5,
                                             ),
@@ -368,9 +368,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _buildBenefitRow(
                       icon: Icons.favorite_border_rounded,
                       iconBg: const Color(0xFFFFEBEE),
-                      iconColor: const Color(0xFFF87171),
+                      iconColor: AppColors.primaryLight,
                       text: 'Nhắc nhở sinh nhật & kỷ niệm tự động',
-                      checkmarkColor: const Color(0xFFF87171),
+                      checkmarkColor: AppColors.primaryLight,
                       isDark: isDark,
                     ).animate().fadeIn(delay: 300.ms).slideX(begin: 0.1),
 
@@ -379,9 +379,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     _buildBenefitRow(
                       icon: Icons.notifications_none_rounded,
                       iconBg: const Color(0xFFE0F2F1),
-                      iconColor: const Color(0xFF26A69A),
+                      iconColor: AppColors.secondaryLight,
                       text: 'Thông báo trước 1–7 ngày tuỳ chỉnh',
-                      checkmarkColor: const Color(0xFF26A69A),
+                      checkmarkColor: AppColors.secondaryLight,
                       isDark: isDark,
                     ).animate().fadeIn(delay: 400.ms).slideX(begin: 0.1),
 
@@ -458,14 +458,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           height: 52,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFFF87171), Color(0xFF4DB6AC)],
+                              colors: [AppColors.primaryLight, AppColors.secondaryDark],
                               begin: Alignment.centerLeft,
                               end: Alignment.centerRight,
                             ),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFFF87171).withValues(alpha: 0.3),
+                                color: AppColors.primaryLight.withValues(alpha: 0.3),
                                 blurRadius: 12,
                                 offset: const Offset(0, 4),
                               ),
@@ -532,7 +532,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 TextSpan(
                                   text: 'Đăng nhập ngay',
                                   style: TextStyle(
-                                    color: Color(0xFFF87171),
+                                    color: AppColors.primaryLight,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -559,12 +559,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         TextSpan(text: 'Bằng cách đăng ký, bạn đồng ý với '),
                         TextSpan(
                           text: 'Điều khoản',
-                          style: TextStyle(color: Color(0xFF26A69A)),
+                          style: TextStyle(color: AppColors.secondaryLight),
                         ),
                         TextSpan(text: ' và '),
                         TextSpan(
                           text: 'Chính sách bảo mật',
-                          style: TextStyle(color: Color(0xFF26A69A)),
+                          style: TextStyle(color: AppColors.secondaryLight),
                         ),
                         TextSpan(text: '.'),
                       ],

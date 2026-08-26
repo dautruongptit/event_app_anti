@@ -92,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       height: 90,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [Color(0xFFF87171), Color(0xFF4DB6AC)],
+                          colors: [AppColors.primaryLight, AppColors.secondaryDark],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
@@ -127,7 +127,7 @@ class _SplashScreenState extends State<SplashScreen> {
                               child: const Icon(
                                 Icons.favorite_rounded,
                                 size: 14,
-                                color: Color(0xFFF87171),
+                                color: AppColors.primaryLight,
                               ),
                             ),
                           ),
@@ -146,10 +146,10 @@ class _SplashScreenState extends State<SplashScreen> {
                           letterSpacing: 4.0,
                         ),
                         children: const [
-                          TextSpan(text: 'N', style: TextStyle(color: Color(0xFFF87171))),
-                          TextSpan(text: ' I ', style: TextStyle(color: Color(0xFFF87171))),
-                          TextSpan(text: 'N', style: TextStyle(color: Color(0xFF26A69A))),
-                          TextSpan(text: 'O', style: TextStyle(color: Color(0xFF26A69A))),
+                          TextSpan(text: 'N', style: TextStyle(color: AppColors.primaryLight)),
+                          TextSpan(text: ' I ', style: TextStyle(color: AppColors.primaryLight)),
+                          TextSpan(text: 'N', style: TextStyle(color: AppColors.secondaryLight)),
+                          TextSpan(text: 'O', style: TextStyle(color: AppColors.secondaryLight)),
                         ],
                       ),
                     ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.2),
@@ -185,7 +185,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     _buildFeatureCard(
                       icon: Icons.notifications_none_rounded,
                       iconBg: const Color(0xFFFFEBEE),
-                      iconColor: const Color(0xFFF87171),
+                      iconColor: AppColors.primaryLight,
                       title: 'Nhắc nhở thông minh',
                       subtitle: 'Không bỏ lỡ ngày quan trọng',
                       isDark: isDark,
@@ -196,7 +196,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     _buildFeatureCard(
                       icon: Icons.people_outline_rounded,
                       iconBg: const Color(0xFFE0F2F1),
-                      iconColor: const Color(0xFF26A69A),
+                      iconColor: AppColors.secondaryLight,
                       title: 'Quản lý người thân',
                       subtitle: 'Sinh nhật & kỷ niệm mọi người',
                       isDark: isDark,
@@ -311,7 +311,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     height: 52,
                     child: CustomPaint(
                       painter: DashedRectPainter(
-                        color: const Color(0xFFF87171),
+                        color: AppColors.primaryLight,
                         strokeWidth: 1.5,
                         gap: 4.0,
                         radius: 16,
@@ -329,7 +329,7 @@ class _SplashScreenState extends State<SplashScreen> {
                             Text(
                               'Tạo tài khoản mới',
                               style: AppTextStyles.subtitle.copyWith(
-                                color: const Color(0xFFF87171),
+                                color: AppColors.primaryLight,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -337,7 +337,7 @@ class _SplashScreenState extends State<SplashScreen> {
                             const Icon(
                               Icons.arrow_forward_rounded,
                               size: 18,
-                              color: Color(0xFFF87171),
+                              color: AppColors.primaryLight,
                             ),
                           ],
                         ),
@@ -359,12 +359,12 @@ class _SplashScreenState extends State<SplashScreen> {
                         TextSpan(text: 'Bằng cách tiếp tục, bạn đồng ý với '),
                         TextSpan(
                           text: 'Điều khoản dịch vụ',
-                          style: TextStyle(color: Color(0xFFF87171)),
+                          style: TextStyle(color: AppColors.primaryLight),
                         ),
                         TextSpan(text: ' và '),
                         TextSpan(
                           text: 'Chính sách bảo mật',
-                          style: TextStyle(color: Color(0xFFF87171)),
+                          style: TextStyle(color: AppColors.primaryLight),
                         ),
                         TextSpan(text: '.'),
                       ],
