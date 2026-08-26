@@ -35,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final homeData = homeProvider.homeData;
     final userName = homeData?.userName ?? user?.fullName ?? 'Khách';
+    final avatarUrl = homeData?.avatarUrl ?? user?.avatarUrl;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.surfaceLight,
@@ -46,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
               : CustomScrollView(
                   slivers: [
                     SliverToBoxAdapter(
-                      child: _buildHeader(userName, isDark),
+                      child: _buildHeader(userName, avatarUrl, isDark),
                     ),
                     if (homeData != null && homeData.upcomingEvents.isNotEmpty)
                       SliverToBoxAdapter(
@@ -74,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader(String userName, bool isDark) {
+  Widget _buildHeader(String userName, String? avatarUrl, bool isDark) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
       child: Row(
@@ -135,10 +136,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 size: 24,
               ),
               const SizedBox(width: 16),
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 20,
                 backgroundColor: AppColors.secondaryLight,
-                child: Text('😊', style: TextStyle(fontSize: 20)),
+                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                child: avatarUrl == null
+                    ? const Text('😊', style: TextStyle(fontSize: 20))
+                    : null,
               ),
             ],
           ),

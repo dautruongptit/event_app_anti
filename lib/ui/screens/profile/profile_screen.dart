@@ -42,18 +42,19 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.notifications_none,
-                        color: Colors.white,
-                        size: 32,
-                      ),
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      backgroundImage: user?.avatarUrl != null
+                          ? NetworkImage(user!.avatarUrl!)
+                          : null,
+                      child: user?.avatarUrl == null
+                          ? const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 32,
+                            )
+                          : null,
                     ),
                     const SizedBox(height: 12),
                     Text(
