@@ -39,6 +39,9 @@ class _EventFormScreenState extends State<EventFormScreen> {
   int _lunarDay = 1;
   int _lunarMonth = 1;
 
+  int _customIntervalValue = 1;
+  String _customIntervalUnit = 'WEEK';
+
   // Nhắc nhở as list of reminder objects
   final List<_ReminderItem> _reminders = [
     _ReminderItem(label: '7 ngày trước', daysBefore: 7),
@@ -60,12 +63,21 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   static const List<_RepeatOption> _repeatOptions = [
     _RepeatOption(key: 'NONE', label: 'Không lặp'),
+    _RepeatOption(key: 'HOURLY', label: 'Mỗi giờ'),
     _RepeatOption(key: 'DAILY', label: 'Hàng ngày'),
     _RepeatOption(key: 'WEEKLY', label: 'Hàng tuần'),
     _RepeatOption(key: 'MONTHLY', label: 'Hàng tháng'),
     _RepeatOption(key: 'YEARLY', label: 'Hàng năm'),
     _RepeatOption(key: 'LUNAR_YEARLY', label: 'Hàng năm (Âm lịch)'),
     _RepeatOption(key: 'CUSTOM', label: 'Tùy chỉnh'),
+  ];
+
+  static const List<_CustomUnitOption> _customUnitOptions = [
+    _CustomUnitOption(key: 'HOUR', label: 'Giờ'),
+    _CustomUnitOption(key: 'DAY', label: 'Ngày'),
+    _CustomUnitOption(key: 'WEEK', label: 'Tuần'),
+    _CustomUnitOption(key: 'MONTH', label: 'Tháng'),
+    _CustomUnitOption(key: 'YEAR', label: 'Năm'),
   ];
 
   static const List<_ReminderOption> _reminderOptions = [
@@ -434,6 +446,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
       if (_repeatKey != 'NONE') 'recurrenceType': _repeatKey,
       if (_repeatKey == 'LUNAR_YEARLY') 'lunarDay': _lunarDay,
       if (_repeatKey == 'LUNAR_YEARLY') 'lunarMonth': _lunarMonth,
+      if (_repeatKey == 'CUSTOM') 'customIntervalValue': _customIntervalValue,
+      if (_repeatKey == 'CUSTOM') 'customIntervalUnit': _customIntervalUnit,
       'notes': _notesController.text.trim(),
       'relativeId': _selectedRelativeId,
       'reminders': reminders,
@@ -805,6 +819,63 @@ class _EventFormScreenState extends State<EventFormScreen> {
                     const SizedBox(height: 16),
                   ],
 
+                  if (_repeatKey == 'CUSTOM') ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _customIntervalValue,
+                            decoration: InputDecoration(
+                              labelText: 'Số lần',
+                              labelStyle: AppTextStyles.bodySmall.copyWith(color: subText),
+                              filled: true,
+                              fillColor: cardColor,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                            ),
+                            style: AppTextStyles.body.copyWith(color: onSurface),
+                            dropdownColor: cardColor,
+                            items: List.generate(30, (i) => DropdownMenuItem(value: i + 1, child: Text('${i + 1}'))),
+                            onChanged: (v) => setState(() => _customIntervalValue = v ?? 1),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _customIntervalUnit,
+                            decoration: InputDecoration(
+                              labelText: 'Đơn vị',
+                              labelStyle: AppTextStyles.bodySmall.copyWith(color: subText),
+                              filled: true,
+                              fillColor: cardColor,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(14),
+                                borderSide: BorderSide(color: borderColor),
+                              ),
+                            ),
+                            style: AppTextStyles.body.copyWith(color: onSurface),
+                            dropdownColor: cardColor,
+                            items: _customUnitOptions
+                                .map((u) => DropdownMenuItem(value: u.key, child: Text(u.label)))
+                                .toList(),
+                            onChanged: (v) => setState(() => _customIntervalUnit = v ?? 'WEEK'),
+                          ),
+                        ),
+                      ],
+                    ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.05),
+                    const SizedBox(height: 16),
+                  ],
+
                   // ── Nhắc nhở Section ──
                   Container(
                     decoration: BoxDecoration(
@@ -1067,6 +1138,12 @@ class _RepeatOption {
   final String key;
   final String label;
   const _RepeatOption({required this.key, required this.label});
+}
+
+class _CustomUnitOption {
+  final String key;
+  final String label;
+  const _CustomUnitOption({required this.key, required this.label});
 }
 
 class _ReminderOption {
