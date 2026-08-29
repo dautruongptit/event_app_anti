@@ -1905,7 +1905,9 @@ In `lib/core/router/app_router.dart`, replace the `create` route (currently line
                     ),
 ```
 
-And add the Holidays route as a new sibling right after it (still inside the `/events` branch's `routes:` list, alongside `'create'` and `':id'`):
+(Verify the exact current line range with `Grep -n "path: 'create'" lib/core/router/app_router.dart` before editing — it drifts slightly as unrelated commits land; at plan-writing time it was lines 122-129 inside the `/events` branch.)
+
+Add the Holidays route as a new sibling right after it (still inside the `/events` branch's `routes:` list, alongside `'create'` and `':id'`):
 
 ```dart
                     GoRoute(
@@ -4525,6 +4527,8 @@ git commit -m "feat(nino): redesign Event type selection screen"
 
 Note: the design's category list has 14 entries including lunar-specific ones ("Ngày giỗ", "Lễ Tết âm lịch"...) that do not exist in this app's real category set (7 categories, DB-seeded, `categoryId` 1-7 — see `_categories` below). Do not invent new category IDs; keep the existing 7. The design's "Theo lịch âm" toggle is likewise not ported as a separate control — lunar-ness is already expressed by the existing `recurrenceType == 'LUNAR_YEARLY'` (with `lunarDay`/`lunarMonth` fields), which this task keeps as-is, just reskinned.
 
+Note: the current `event_form_screen.dart` on this branch supports `recurrenceType` values `NONE`/`DAILY`/`WEEKLY`/`MONTHLY`/`YEARLY`/`LUNAR_YEARLY`/`CUSTOM`, but `CUSTOM` has no interval-value/unit UI yet (no `customIntervalValue`/`customIntervalUnit` fields, no `HOURLY` option) — that UI was mid-flight on a different, unmerged branch and is **not** part of this redesign's scope. Reskin exactly what exists today: keep `CUSTOM` selectable in the Lặp lại sheet (it just won't show extra fields, same as today), do not add `_customIntervalValue`/`_customIntervalUnit`/`_CustomUnitOption`/`HOURLY` — they are not in the `_repeatOptions`/state below.
+
 - [ ] **Step 1: Replace the full content of `event_form_screen.dart`**
 
 ```dart
@@ -4575,9 +4579,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
   int _lunarDay = 1;
   int _lunarMonth = 1;
 
-  int _customIntervalValue = 1;
-  String _customIntervalUnit = 'WEEK';
-
   final List<_ReminderItem> _reminders = [
     _ReminderItem(label: '7 ngày trước', daysBefore: 7),
     _ReminderItem(label: '3 ngày trước', daysBefore: 3),
@@ -4597,21 +4598,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   static const List<_RepeatOption> _repeatOptions = [
     _RepeatOption(key: 'NONE', label: 'Không lặp', icon: '🚫'),
-    _RepeatOption(key: 'HOURLY', label: 'Mỗi giờ', icon: '🔁'),
     _RepeatOption(key: 'DAILY', label: 'Hàng ngày', icon: '🔁'),
     _RepeatOption(key: 'WEEKLY', label: 'Hàng tuần', icon: '🔁'),
     _RepeatOption(key: 'MONTHLY', label: 'Hàng tháng', icon: '🔁'),
     _RepeatOption(key: 'YEARLY', label: 'Hàng năm', icon: '🔁'),
     _RepeatOption(key: 'LUNAR_YEARLY', label: 'Hàng năm (Âm lịch)', icon: '🧧'),
     _RepeatOption(key: 'CUSTOM', label: 'Tùy chỉnh', icon: '⚙️'),
-  ];
-
-  static const List<_CustomUnitOption> _customUnitOptions = [
-    _CustomUnitOption(key: 'HOUR', label: 'Giờ'),
-    _CustomUnitOption(key: 'DAY', label: 'Ngày'),
-    _CustomUnitOption(key: 'WEEK', label: 'Tuần'),
-    _CustomUnitOption(key: 'MONTH', label: 'Tháng'),
-    _CustomUnitOption(key: 'YEAR', label: 'Năm'),
   ];
 
   static const List<_ReminderOption> _reminderOptions = [
@@ -4858,8 +4850,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
       if (_repeatKey != 'NONE') 'recurrenceType': _repeatKey,
       if (_repeatKey == 'LUNAR_YEARLY') 'lunarDay': _lunarDay,
       if (_repeatKey == 'LUNAR_YEARLY') 'lunarMonth': _lunarMonth,
-      if (_repeatKey == 'CUSTOM') 'customIntervalValue': _customIntervalValue,
-      if (_repeatKey == 'CUSTOM') 'customIntervalUnit': _customIntervalUnit,
       'notes': _notesController.text.trim(),
       'relativeId': _selectedRelativeId,
       'reminders': reminders,
@@ -5016,62 +5006,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
                                   Expanded(child: _numberDropdown('Ngày âm', _lunarDay, 30, (v) => setState(() => _lunarDay = v), card, line2, txt, mut)),
                                   const SizedBox(width: 12),
                                   Expanded(child: _numberDropdown('Tháng âm', _lunarMonth, 12, (v) => setState(() => _lunarMonth = v), card, line2, txt, mut)),
-                                ],
-                              ),
-                            ),
-                          if (_repeatKey == 'CUSTOM')
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(15, 0, 15, 14),
-                              child: Row(
-                                children: [
-                                  Text('Mỗi', style: TextStyle(fontSize: 12, color: mut)),
-                                  const SizedBox(width: 9),
-                                  SizedBox(
-                                    width: 56,
-                                    child: TextFormField(
-                                      initialValue: '$_customIntervalValue',
-                                      keyboardType: TextInputType.number,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: txt),
-                                      decoration: InputDecoration(
-                                        filled: true,
-                                        fillColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-                                        contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: line2)),
-                                      ),
-                                      onChanged: (v) => _customIntervalValue = int.tryParse(v) ?? 1,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 9),
-                                  GestureDetector(
-                                    onTap: () => showBottomOptionSheet(
-                                      context: context,
-                                      title: 'Đơn vị',
-                                      options: _customUnitOptions
-                                          .map((u) => NinoOption(
-                                                label: u.label,
-                                                icon: '',
-                                                selected: _customIntervalUnit == u.key,
-                                                onTap: () {
-                                                  Navigator.of(context).pop();
-                                                  setState(() => _customIntervalUnit = u.key);
-                                                },
-                                              ))
-                                          .toList(),
-                                    ),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-                                      decoration: BoxDecoration(color: isDark ? AppColors.bgDark : AppColors.bgLight, borderRadius: BorderRadius.circular(12), border: Border.all(color: line2)),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(_customUnitOptions.firstWhere((u) => u.key == _customIntervalUnit).label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: txt)),
-                                          const SizedBox(width: 6),
-                                          Icon(Icons.expand_more_rounded, size: 14, color: mut),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
@@ -5233,12 +5167,6 @@ class _RepeatOption {
   final String label;
   final String icon;
   const _RepeatOption({required this.key, required this.label, required this.icon});
-}
-
-class _CustomUnitOption {
-  final String key;
-  final String label;
-  const _CustomUnitOption({required this.key, required this.label});
 }
 
 class _ReminderOption {
