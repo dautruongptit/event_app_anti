@@ -1619,7 +1619,11 @@ class LunarUtils {
     dl = dl + (0.019993 - 0.000101 * t) * math.sin(dr * 2 * m) + 0.000290 * math.sin(dr * 3 * m);
     var l = (l0 + dl) * dr;
     l = l - _pi2 * (l / _pi2).floor();
-    return (l / _pi2 * 24).floor();
+    // 12-bucket solar-term index (each bucket = 30° = π/6 rad), matching the
+    // reference algorithm's `getSunLongitude` (`INT(SunLongitude(jdn)/PI*6)`).
+    // NOT a 24-bucket (15°) division — that silently breaks the `sunLong >= 9`
+    // (270°, winter solstice) threshold used by `_getLunarMonth11`.
+    return (l / math.pi * 6).floor();
   }
 
   static int _getSunLongitude(int dayNumber, int timeZone) => _sunLongitude(dayNumber - 0.5 - timeZone / 24);
