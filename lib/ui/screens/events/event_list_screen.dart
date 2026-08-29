@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:event_app/core/constants/app_colors.dart';
-import 'package:event_app/core/constants/app_text_styles.dart';
-import 'package:event_app/providers/event_provider.dart';
-import 'package:event_app/models/event.dart';
-import 'package:event_app/core/utils/date_utils.dart';
-
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/vn_holidays.dart';
+import '../../../core/utils/date_utils.dart';
+import '../../../providers/event_provider.dart';
+import '../../../models/event.dart';
+import '../../widgets/nino/card_row.dart';
+import '../../widgets/nino/pill_tabs.dart';
+import '../../widgets/nino/sticky_action_bars.dart';
+import '../../widgets/nino/nino_toast.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -28,35 +30,20 @@ class _EventListScreenState extends State<EventListScreen> {
   }
 
   void _onMonthSelected(int? month) {
-    setState(() {
-      _selectedMonth = month;
-    });
+    setState(() => _selectedMonth = month);
     context.read<EventProvider>().setFilter(month: month);
   }
 
-  void _deleteEvent(BuildContext context, int eventId) {
-    showDialog(
+  Future<void> _deleteEvent(BuildContext context, int eventId) async {
+    final confirmed = await showDeleteConfirmSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Xác nhận xóa', style: AppTextStyles.heading3),
-        content: Text('Bạn có chắc chắn muốn xóa sự kiện này không?',
-            style: AppTextStyles.body),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Hủy', style: AppTextStyles.button.copyWith(color: AppColors.textSecondaryLight)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<EventProvider>().deleteEvent(eventId);
-            },
-            child: Text('Xóa', style: AppTextStyles.button.copyWith(color: AppColors.error)),
-          ),
-        ],
-      ),
+      title: 'Xoá sự kiện này?',
+      message: 'Bạn có chắc chắn muốn xoá sự kiện này không?',
     );
+    if (confirmed && context.mounted) {
+      context.read<EventProvider>().deleteEvent(eventId);
+      showNinoToast(context, 'Đã xoá sự kiện');
+    }
   }
 
   @override
@@ -64,320 +51,166 @@ class _EventListScreenState extends State<EventListScreen> {
     final provider = context.watch<EventProvider>();
     final allEvents = provider.events;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final txt = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final mut = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final fnt = isDark ? AppColors.textFaintDark : AppColors.textFaintLight;
+    final card = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final line = isDark ? AppColors.lineDark : AppColors.lineLight;
+    final pri = isDark ? AppColors.primaryDark : AppColors.primaryLight;
+    final priSoft = isDark ? AppColors.primarySoftDark : AppColors.primarySoftLight;
 
-    // Extract months for the filter chips
-    final availableMonths = allEvents
-        .map((e) => e.eventDate.month)
-        .toSet()
-        .toList()
-      ..sort();
-
-    // Group events by month/year for display
+    final availableMonths = allEvents.map((e) => e.eventDate.month).toSet().toList()..sort();
     final groupedEvents = <String, List<EventModel>>{};
-    for (var event in allEvents) {
+    for (final event in allEvents) {
       final key = 'Tháng ${event.eventDate.month}, ${event.eventDate.year}';
-      if (groupedEvents.containsKey(key)) {
-        groupedEvents[key]!.add(event);
-      } else {
-        groupedEvents[key] = [event];
-      }
+      groupedEvents.putIfAbsent(key, () => []).add(event);
     }
+
+    final year = DateTime.now().year;
+    final holidays = resolveVnHolidays(year);
+    final officialCount = holidays.where((h) => h.def.official).length;
+    final offDays = holidays.where((h) => h.def.official).fold<int>(0, (n, h) => n + h.def.officialDaysOff);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/events/new'),
-        backgroundColor: AppColors.primaryLight,
-        foregroundColor: AppColors.surfaceLight,
-        icon: const Icon(Icons.add),
-        label: Text('Thêm sự kiện', style: AppTextStyles.button),
-      ),
-      body: Column(
-        children: [
-          // Gradient Header
-          Container(
-            height: 180,
-            width: double.infinity,
-            padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 20),
-            decoration: const BoxDecoration(
-              gradient: AppColors.headerGradient,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(32),
-                bottomRight: Radius.circular(32),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Sự kiện',
-                        style: AppTextStyles.heading1.copyWith(color: AppColors.surfaceLight),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Quản lý và theo dõi',
-                        style: AppTextStyles.body.copyWith(
-                          color: AppColors.surfaceLight.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: const BoxDecoration(
-                    color: AppColors.surfaceLight,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.tune_rounded,
-                    color: AppColors.primaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Horizontal Filter Chips
-          if (availableMonths.isNotEmpty)
+      body: SafeArea(
+        child: Column(
+          children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  children: [
-                    _buildFilterChip(
-                      label: 'Tất cả',
-                      isSelected: _selectedMonth == null,
-                      onTap: () => _onMonthSelected(null),
-                      isDark: isDark,
-                    ),
-                    ...availableMonths.map((month) {
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 12.0),
-                        child: _buildFilterChip(
-                          label: 'Tháng $month',
-                          isSelected: _selectedMonth == month,
-                          onTap: () => _onMonthSelected(month),
-                          isDark: isDark,
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ),
-
-          // Events List
-          Expanded(
-            child: provider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppColors.primaryLight))
-                : allEvents.isEmpty
-                    ? Center(
-                        child: Text(
-                          'Không có sự kiện nào',
-                          style: AppTextStyles.body.copyWith(
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                        itemCount: groupedEvents.keys.length,
-                        itemBuilder: (context, index) {
-                          final key = groupedEvents.keys.elementAt(index);
-                          final monthEvents = groupedEvents[key]!;
-                          
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                                child: Text(
-                                  key,
-                                  style: AppTextStyles.heading3.copyWith(
-                                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                                  ),
-                                ),
-                              ),
-                              ...monthEvents.map((event) {
-                                return _buildEventCard(context, event)
-                                    .animate()
-                                    .fade(duration: 300.ms)
-                                    .slideY(begin: 0.1, end: 0, duration: 300.ms);
-                              }),
-                            ],
-                          );
-                        },
+              padding: const EdgeInsets.fromLTRB(18, 8, 18, 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Sự kiện', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.6, color: txt)),
+                  GestureDetector(
+                    onTap: () => context.push('/events/new'),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: pri,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: pri.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 6))],
                       ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFilterChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryLight
-              : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primaryLight : AppColors.textSecondaryLight.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: AppTextStyles.label.copyWith(
-            color: isSelected
-                ? Colors.white
-                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEventCard(BuildContext context, EventModel event) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final categoryColor = event.categoryColorValue;
-    final iconBg = categoryColor.withValues(alpha: 0.12);
-
-    return GestureDetector(
-      onTap: () => context.push('/events/${event.id}'),
-      child: Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white12 : const Color(0xFFE0E0E0),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: iconBg,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              event.eventTypeIcon,
-              color: event.categoryColorValue,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  event.title,
-                  style: AppTextStyles.subtitle.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                  ),
-                ),
-                if (event.relativeName != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    event.relativeName!,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondaryLight,
+                      child: const Icon(Icons.add_rounded, color: Colors.white),
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondaryLight),
-                    const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        AppDateUtils.formatDate(event.eventDate),
-                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
-                        overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Dương lịch & âm lịch trong một dòng thời gian', style: TextStyle(fontSize: 12, color: mut)),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: GestureDetector(
+                onTap: () => context.push('/events/holidays'),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(18), border: Border.all(color: line)),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(color: priSoft, borderRadius: BorderRadius.circular(12)),
+                        alignment: Alignment.center,
+                        child: const Text('🇻🇳', style: TextStyle(fontSize: 16)),
                       ),
-                    ),
-                    if (event.eventTime != null && event.eventTime!.isNotEmpty) ...[
-                      const SizedBox(width: 12),
-                      Icon(Icons.access_time_rounded, size: 14, color: AppColors.textSecondaryLight),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          AppDateUtils.formatTime(event.eventTime),
-                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondaryLight),
-                          overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Lịch nghỉ lễ Việt Nam', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: txt)),
+                            const SizedBox(height: 2),
+                            Text('$officialCount dịp lễ chính · $offDays ngày nghỉ theo quy định $year', style: TextStyle(fontSize: 12, color: mut)),
+                          ],
                         ),
                       ),
+                      Icon(Icons.chevron_right_rounded, color: fnt),
                     ],
-                  ],
+                  ),
                 ),
-              ],
+              ),
             ),
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded, color: AppColors.textSecondaryLight),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            color: isDark ? AppColors.cardDark : AppColors.surfaceLight,
-            elevation: 4,
-            onSelected: (value) {
-              if (value == 'edit') {
-                context.push('/events/${event.id}/edit');
-              } else if (value == 'delete') {
-                _deleteEvent(context, event.id);
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit_rounded, size: 20, color: AppColors.textSecondaryLight),
-                    const SizedBox(width: 12),
-                    Text('Chỉnh sửa', style: AppTextStyles.body),
-                  ],
+            if (availableMonths.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: FilterChipsRow(
+                  labels: ['Tất cả', ...availableMonths.map((m) => 'Tháng $m')],
+                  selected: _selectedMonth == null ? 'Tất cả' : 'Tháng $_selectedMonth',
+                  onChanged: (label) => _onMonthSelected(label == 'Tất cả' ? null : int.parse(label.replaceFirst('Tháng ', ''))),
                 ),
               ),
-              PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.error),
-                    const SizedBox(width: 12),
-                    Text('Xóa', style: AppTextStyles.body.copyWith(color: AppColors.error)),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: provider.isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : allEvents.isEmpty
+                      ? Center(child: Text('Không có sự kiện nào', style: TextStyle(color: mut)))
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+                          itemCount: groupedEvents.keys.length,
+                          itemBuilder: (context, index) {
+                            final key = groupedEvents.keys.elementAt(index);
+                            final monthEvents = groupedEvents[key]!;
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  child: Text(key.toUpperCase(), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.8, color: fnt)),
+                                ),
+                                ...monthEvents.map((event) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 9),
+                                      child: CardRow(
+                                        onTap: () => context.push('/events/${event.id}'),
+                                        leading: SquareIconBadge(icon: event.eventTypeIcon, color: event.categoryColorValue, background: event.categoryColorValue.withValues(alpha: 0.15)),
+                                        title: event.title,
+                                        meta: Row(
+                                          children: [
+                                            Flexible(child: Text(AppDateUtils.formatDate(event.eventDate), style: TextStyle(fontSize: 12, color: mut), overflow: TextOverflow.ellipsis)),
+                                            if (event.eventTime != null && event.eventTime!.isNotEmpty) ...[
+                                              const SizedBox(width: 8),
+                                              Text('· ${AppDateUtils.formatTime(event.eventTime)}', style: TextStyle(fontSize: 12, color: mut)),
+                                            ],
+                                          ],
+                                        ),
+                                        trailing: PopupMenuButton<String>(
+                                          icon: Icon(Icons.more_vert_rounded, color: fnt, size: 20),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                          color: card,
+                                          onSelected: (v) {
+                                            if (v == 'edit') context.push('/events/${event.id}/edit');
+                                            if (v == 'delete') _deleteEvent(context, event.id);
+                                          },
+                                          itemBuilder: (context) => [
+                                            PopupMenuItem(
+                                              value: 'edit',
+                                              child: Row(children: [const Icon(Icons.edit_rounded, size: 18), const SizedBox(width: 10), Text('Chỉnh sửa', style: TextStyle(color: txt))]),
+                                            ),
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(children: [const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error), const SizedBox(width: 10), const Text('Xoá', style: TextStyle(color: AppColors.error))]),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )),
+                              ],
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
