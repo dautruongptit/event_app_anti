@@ -10,11 +10,15 @@ import 'package:event_app/providers/relative_provider.dart';
 class EventFormScreen extends StatefulWidget {
   final bool isRelativeEvent;
   final int? eventId;
+  final String? prefillTitle;
+  final DateTime? prefillDate;
 
   const EventFormScreen({
     super.key,
     this.isRelativeEvent = true,
     this.eventId,
+    this.prefillTitle,
+    this.prefillDate,
   });
 
   @override
@@ -79,6 +83,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.eventId == null && widget.prefillTitle != null) {
+      _titleController.text = widget.prefillTitle!;
+      if (widget.prefillDate != null) _selectedDate = widget.prefillDate!;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<RelativeProvider>().loadRelatives();
       if (widget.eventId != null) {

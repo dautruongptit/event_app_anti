@@ -11,6 +11,7 @@ import '../../ui/screens/events/event_list_screen.dart';
 import '../../ui/screens/events/event_form_screen.dart';
 import '../../ui/screens/events/event_detail_screen.dart';
 import '../../ui/screens/events/event_type_selection_screen.dart';
+import '../../ui/screens/holidays/holiday_screen.dart';
 import '../../ui/screens/relatives/relative_list_screen.dart';
 import '../../ui/screens/relatives/relative_form_screen.dart';
 import '../../ui/screens/relatives/relative_detail_screen.dart';
@@ -122,10 +123,17 @@ class AppRouter {
                       path: 'create',
                       builder: (context, state) {
                         final type = state.uri.queryParameters['type'];
+                        final extra = state.extra as Map<String, dynamic>?;
                         return EventFormScreen(
                           isRelativeEvent: type != 'self',
+                          prefillTitle: extra?['title'] as String?,
+                          prefillDate: extra?['date'] as DateTime?,
                         );
                       },
+                    ),
+                    GoRoute(
+                      path: 'holidays',
+                      builder: (context, state) => const HolidayScreen(),
                     ),
                     GoRoute(
                       path: ':id',
