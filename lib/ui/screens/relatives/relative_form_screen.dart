@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-
-import 'package:event_app/core/constants/app_colors.dart';
-import 'package:event_app/core/constants/app_text_styles.dart';
-import 'package:event_app/providers/relative_provider.dart';
-import 'package:event_app/core/utils/date_utils.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../providers/relative_provider.dart';
+import '../../widgets/nino/bottom_option_sheet.dart';
+import '../../widgets/nino/nino_toast.dart';
 
 class RelativeFormScreen extends StatefulWidget {
   final int? relativeId;
@@ -17,7 +16,7 @@ class RelativeFormScreen extends StatefulWidget {
 
 class _RelativeFormScreenState extends State<RelativeFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   final _nameController = TextEditingController();
   final _nicknameController = TextEditingController();
   final _locationController = TextEditingController();
@@ -27,15 +26,18 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
 
   String _groupType = 'GIA_DINH';
   String _gender = 'MALE';
-  DateTime? _dateOfBirth;
+  int? _dobDay;
+  int? _dobMonth;
+  int? _dobYear;
   List<String> _hobbies = [];
   bool _isInit = false;
+  bool _touched = false;
 
-  final Map<String, String> _groupTypes = {
-    'GIA_DINH': 'Gia đình',
-    'VO_CHONG': 'Vợ/Chồng',
-    'CON_CAI': 'Con cái',
-    'BAN_BE': 'Bạn bè',
+  static const Map<String, (String, String)> _groupTypes = {
+    'GIA_DINH': ('Gia đình', '👨‍👩‍👧'),
+    'VO_CHONG': ('Vợ/Chồng', '💍'),
+    'CON_CAI': ('Con cái', '👶'),
+    'BAN_BE': ('Bạn bè', '👤'),
   };
 
   @override
@@ -48,14 +50,15 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
   }
 
   void _loadRelativeData() {
-    final provider = context.read<RelativeProvider>();
-    final relative = provider.selectedRelative;
+    final relative = context.read<RelativeProvider>().selectedRelative;
     if (relative != null && relative.id == widget.relativeId) {
       _nameController.text = relative.name;
       _nicknameController.text = relative.nickname ?? '';
       _groupType = relative.groupType;
       _gender = relative.gender ?? 'MALE';
-      _dateOfBirth = relative.dateOfBirth;
+      _dobDay = relative.dateOfBirth?.day;
+      _dobMonth = relative.dateOfBirth?.month;
+      _dobYear = relative.dateOfBirth?.year;
       _locationController.text = relative.location ?? '';
       _heightController.text = relative.heightCm?.toString() ?? '';
       _weightController.text = relative.weightKg?.toString() ?? '';
@@ -84,41 +87,53 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
     }
   }
 
-  void _removeHobby(String hobby) {
-    setState(() {
-      _hobbies.remove(hobby);
-    });
-  }
+  void _removeHobby(String hobby) => setState(() => _hobbies.remove(hobby));
 
-  Future<void> _selectDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _dateOfBirth ?? DateTime.now(),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primaryLight,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        _dateOfBirth = picked;
-      });
+  Future<void> _pickDatePart(String part) async {
+    final now = DateTime.now();
+    late final List<int> range;
+    late final String title;
+    late final int? current;
+    if (part == 'day') {
+      range = List.generate(31, (i) => i + 1);
+      title = 'Chọn ngày sinh';
+      current = _dobDay;
+    } else if (part == 'month') {
+      range = List.generate(12, (i) => i + 1);
+      title = 'Chọn tháng sinh';
+      current = _dobMonth;
+    } else {
+      range = List.generate(90, (i) => now.year - i);
+      title = 'Chọn năm sinh';
+      current = _dobYear;
     }
+    await showBottomOptionSheet(
+      context: context,
+      title: title,
+      options: range
+          .map((v) => NinoOption(
+                label: '$v',
+                icon: '',
+                selected: v == current,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  setState(() {
+                    if (part == 'day') _dobDay = v;
+                    if (part == 'month') _dobMonth = v;
+                    if (part == 'year') _dobYear = v;
+                  });
+                },
+              ))
+          .toList(),
+    );
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    
+    setState(() => _touched = true);
+    if (!_formKey.currentState!.validate() || _dobDay == null || _dobMonth == null || _dobYear == null) {
+      showNinoToast(context, 'Còn thông tin bắt buộc chưa nhập');
+      return;
+    }
     FocusScope.of(context).unfocus();
 
     final data = {
@@ -126,7 +141,7 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
       'nickname': _nicknameController.text.trim().isEmpty ? null : _nicknameController.text.trim(),
       'groupType': _groupType,
       'gender': _gender,
-      'dateOfBirth': _dateOfBirth?.toIso8601String().split('T').first,
+      'dateOfBirth': DateTime(_dobYear!, _dobMonth!, _dobDay!).toIso8601String().split('T').first,
       'location': _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
       'heightCm': _heightController.text.trim().isEmpty ? null : double.tryParse(_heightController.text.trim()),
       'weightKg': _weightController.text.trim().isEmpty ? null : double.tryParse(_weightController.text.trim()),
@@ -134,18 +149,12 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
     };
 
     final provider = context.read<RelativeProvider>();
-    bool success = false;
-    
-    if (widget.relativeId == null) {
-      success = await provider.createRelative(data);
-    } else {
-      success = await provider.updateRelative(widget.relativeId!, data);
-    }
+    final success = widget.relativeId == null
+        ? await provider.createRelative(data)
+        : await provider.updateRelative(widget.relativeId!, data);
 
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(widget.relativeId == null ? 'Đã thêm người thân' : 'Đã cập nhật thông tin')),
-      );
+      showNinoToast(context, widget.relativeId == null ? 'Đã thêm người thân' : 'Đã lưu thay đổi');
       context.pop();
     }
   }
@@ -155,258 +164,289 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
     final isEditing = widget.relativeId != null;
     final isLoading = context.watch<RelativeProvider>().isLoading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final txt = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final mut = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final fnt = isDark ? AppColors.textFaintDark : AppColors.textFaintLight;
+    final card = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final line = isDark ? AppColors.lineDark : AppColors.lineLight;
+    final line2 = isDark ? AppColors.line2Dark : AppColors.line2Light;
+    final pri = isDark ? AppColors.primaryDark : AppColors.primaryLight;
+    final priSoft = isDark ? AppColors.primarySoftDark : AppColors.primarySoftLight;
+    final danger = isDark ? AppColors.errorDark : AppColors.error;
+    final nameError = _touched && _nameController.text.trim().isEmpty;
+    final dobError = _touched && (_dobDay == null || _dobMonth == null || _dobYear == null);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      appBar: AppBar(
-        title: Text(isEditing ? 'Sửa người thân' : 'Thêm người thân'),
-        elevation: 0,
-        backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-      ),
-      body: Stack(
-        children: [
-          Form(
-            key: _formKey,
-            child: ListView(
-              padding: const EdgeInsets.all(24),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Column(
               children: [
-                _buildSectionTitle('Thông tin cơ bản'),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _nameController,
-                  label: 'Họ tên',
-                  icon: Icons.person_outline,
-                  maxLength: 100,
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Vui lòng nhập họ tên';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _nicknameController,
-                  label: 'Tên gọi khác / Biệt danh (không bắt buộc)',
-                  icon: Icons.badge_outlined,
-                  maxLength: 50,
-                ),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Mối quan hệ'),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: _groupTypes.entries.map((e) {
-                    final isSelected = _groupType == e.key;
-                    return ChoiceChip(
-                      label: Text(e.value),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) setState(() => _groupType = e.key);
-                      },
-                      selectedColor: AppColors.primaryLight.withValues(alpha: 0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected ? AppColors.primaryLight : (isDark ? Colors.white70 : Colors.black87),
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      side: BorderSide(
-                        color: isSelected ? AppColors.primaryLight : Colors.transparent,
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Giới tính'),
-                const SizedBox(height: 16),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'MALE', label: Text('Nam')),
-                    ButtonSegment(value: 'FEMALE', label: Text('Nữ')),
-                    ButtonSegment(value: 'OTHER', label: Text('Khác')),
-                  ],
-                  selected: {_gender},
-                  onSelectionChanged: (set) {
-                    setState(() => _gender = set.first);
-                  },
-                  style: ButtonStyle(
-                    backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
-                      if (states.contains(MaterialState.selected)) {
-                        return AppColors.primaryLight.withValues(alpha: 0.2);
-                      }
-                      return Colors.transparent;
-                    }),
-                    foregroundColor: MaterialStateProperty.resolveWith<Color>((states) {
-                      if (states.contains(MaterialState.selected)) {
-                        return AppColors.primaryLight;
-                      }
-                      return isDark ? Colors.white : Colors.black;
-                    }),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Thông tin thêm'),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Ngày sinh'),
-                  subtitle: Text(
-                    _dateOfBirth != null ? AppDateUtils.formatDate(_dateOfBirth!) : 'Chưa chọn',
-                    style: TextStyle(
-                      color: _dateOfBirth != null ? AppColors.primaryLight : Colors.grey,
-                      fontWeight: _dateOfBirth != null ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  trailing: const Icon(Icons.calendar_month),
-                  onTap: _selectDate,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.grey.withValues(alpha: 0.3)),
-                  ),
-                  tileColor: isDark ? Colors.grey[800] : Colors.grey[100],
-                ),
-                const SizedBox(height: 16),
-                _buildTextField(
-                  controller: _locationController,
-                  label: 'Địa chỉ',
-                  icon: Icons.location_on_outlined,
-                  maxLength: 200,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _heightController,
-                        label: 'Chiều cao (cm)',
-                        icon: Icons.height,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _weightController,
-                        label: 'Cân nặng (kg)',
-                        icon: Icons.monitor_weight_outlined,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Sở thích'),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildTextField(
-                        controller: _hobbyController,
-                        label: 'Thêm sở thích',
-                        icon: Icons.star_border,
-                        onSubmitted: (_) => _addHobby(),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    IconButton(
-                      onPressed: _addHobby,
-                      icon: Icon(Icons.add_circle, color: AppColors.primaryLight, size: 32),
-                    ),
-                  ],
-                ),
-                if (_hobbies.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _hobbies.map((hobby) {
-                      return InputChip(
-                        label: Text(hobby),
-                        onDeleted: () => _removeHobby(hobby),
-                        backgroundColor: AppColors.primaryLight.withValues(alpha: 0.1),
-                        deleteIconColor: AppColors.primaryLight,
-                        labelStyle: const TextStyle(color: AppColors.primaryLight),
-                        side: BorderSide.none,
-                      );
-                    }).toList(),
-                  ),
-                ],
-                const SizedBox(height: 48),
-                Container(
-                  width: double.infinity,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(27),
-                    gradient: LinearGradient(
-                      colors: const [AppColors.primaryLight, AppColors.primaryLight],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primaryLight.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 4, 14, 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(onPressed: () => context.pop(), icon: Icon(Icons.chevron_left_rounded, color: txt)),
+                      Text(isEditing ? 'Sửa người thân' : 'Thêm người thân', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: txt)),
+                      TextButton(
+                        onPressed: isLoading ? null : _submit,
+                        child: Text('Lưu', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: pri)),
                       ),
                     ],
                   ),
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(27)),
-                    ),
-                    child: Text(
-                      isEditing ? 'Cập nhật' : 'Thêm mới',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                Expanded(
+                  child: Form(
+                    key: _formKey,
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(18, 6, 18, 32),
+                      children: [
+                        Center(
+                          child: CircleAvatar(
+                            radius: 41,
+                            backgroundColor: priSoft,
+                            child: Text(
+                              _nameController.text.trim().isNotEmpty ? _nameController.text.trim()[0].toUpperCase() : '?',
+                              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: pri),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Text('Họ và tên *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                        const SizedBox(height: 7),
+                        if (isEditing)
+                          GestureDetector(
+                            onTap: () => showNinoToast(context, 'Tên đã lưu không sửa được'),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.neutralSoftDark : AppColors.neutralSoftLight,
+                                borderRadius: BorderRadius.circular(15),
+                                border: Border.all(color: line),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(child: Text(_nameController.text, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: txt))),
+                                  Icon(Icons.lock_outline_rounded, size: 15, color: fnt),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          TextFormField(
+                            controller: _nameController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              hintText: 'Nguyễn Thị Lan',
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: pri, width: 1.5)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: nameError ? danger : line2)),
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ và tên' : null,
+                          ),
+                        if (nameError)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 7),
+                            child: Text('⚠ Vui lòng nhập họ và tên', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: danger)),
+                          ),
+                        const SizedBox(height: 18),
+                        Text('Quan hệ *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                        const SizedBox(height: 7),
+                        GestureDetector(
+                          onTap: () => showBottomOptionSheet(
+                            context: context,
+                            title: 'Quan hệ',
+                            options: _groupTypes.entries
+                                .map((e) => NinoOption(
+                                      label: e.value.$1,
+                                      icon: e.value.$2,
+                                      selected: _groupType == e.key,
+                                      onTap: () {
+                                        Navigator.of(context).pop();
+                                        setState(() => _groupType = e.key);
+                                      },
+                                    ))
+                                .toList(),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+                            decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(15), border: Border.all(color: line2)),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 30,
+                                  height: 30,
+                                  decoration: BoxDecoration(color: priSoft, borderRadius: BorderRadius.circular(10)),
+                                  alignment: Alignment.center,
+                                  child: Text(_groupTypes[_groupType]!.$2, style: const TextStyle(fontSize: 15)),
+                                ),
+                                const SizedBox(width: 11),
+                                Expanded(child: Text(_groupTypes[_groupType]!.$1, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: txt))),
+                                Icon(Icons.chevron_right_rounded, color: fnt),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+                        Text('Giới tính', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                        const SizedBox(height: 7),
+                        Row(
+                          children: [
+                            _genderChip('MALE', 'Nam', mut, pri, priSoft, line2),
+                            const SizedBox(width: 8),
+                            _genderChip('FEMALE', 'Nữ', mut, pri, priSoft, line2),
+                            const SizedBox(width: 8),
+                            _genderChip('OTHER', 'Khác', mut, pri, priSoft, line2),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Text('Ngày sinh *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                        const SizedBox(height: 7),
+                        Row(
+                          children: [
+                            Expanded(child: _dobPart('Ngày', _dobDay, () => _pickDatePart('day'), txt, mut, card, dobError ? danger : line2)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _dobPart('Tháng', _dobMonth, () => _pickDatePart('month'), txt, mut, card, dobError ? danger : line2)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _dobPart('Năm', _dobYear, () => _pickDatePart('year'), txt, mut, card, dobError ? danger : line2)),
+                          ],
+                        ),
+                        if (dobError)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 7),
+                            child: Text('⚠ Chọn đầy đủ ngày / tháng / năm sinh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: danger)),
+                          ),
+                        const SizedBox(height: 18),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Chiều cao (cm) · tuỳ chọn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                                  const SizedBox(height: 7),
+                                  TextFormField(controller: _heightController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: '160')),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 9),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Cân nặng (kg) · tuỳ chọn', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                                  const SizedBox(height: 7),
+                                  TextFormField(controller: _weightController, keyboardType: TextInputType.number, decoration: const InputDecoration(hintText: '52')),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
+                        Text('Địa chỉ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                        const SizedBox(height: 7),
+                        TextFormField(controller: _locationController, decoration: const InputDecoration(hintText: 'Hà Nội')),
+                        const SizedBox(height: 18),
+                        Text('Sở thích', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                        const SizedBox(height: 7),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _hobbyController,
+                                decoration: const InputDecoration(hintText: 'Thêm sở thích'),
+                                onFieldSubmitted: (_) => _addHobby(),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(onPressed: _addHobby, icon: Icon(Icons.add_circle_rounded, color: pri, size: 30)),
+                          ],
+                        ),
+                        if (_hobbies.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _hobbies
+                                  .map((h) => Chip(
+                                        label: Text(h),
+                                        onDeleted: () => _removeHobby(h),
+                                        backgroundColor: priSoft,
+                                        deleteIconColor: pri,
+                                        labelStyle: TextStyle(color: pri, fontWeight: FontWeight.w600),
+                                        side: BorderSide.none,
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: isLoading ? null : _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: pri,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                            child: Text(isEditing ? 'Lưu thay đổi' : 'Lưu người thân', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
               ],
             ),
-          ),
-          if (isLoading)
-            Container(
-              color: Colors.black.withValues(alpha: 0.3),
-              child: const Center(
-                child: CircularProgressIndicator(),
-              ),
-            ),
-        ],
+            if (isLoading) Container(color: Colors.black.withValues(alpha: 0.2), child: const Center(child: CircularProgressIndicator())),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(title, style: AppTextStyles.heading2);
+  Widget _genderChip(String value, String label, Color mut, Color pri, Color priSoft, Color line2) {
+    final isSelected = _gender == value;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _gender = value),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? priSoft : Colors.transparent,
+            border: Border.all(color: isSelected ? pri : line2, width: 1.5),
+            borderRadius: BorderRadius.circular(15),
+          ),
+          alignment: Alignment.center,
+          child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isSelected ? pri : mut)),
+        ),
+      ),
+    );
   }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    int? maxLength,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    void Function(String)? onSubmitted,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLength: maxLength,
-      validator: validator,
-      onFieldSubmitted: onSubmitted,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.grey),
-        filled: true,
-        fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
+  Widget _dobPart(String label, int? value, VoidCallback onTap, Color txt, Color mut, Color card, Color border) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+        decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(15), border: Border.all(color: border, width: 1.5)),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(fontSize: 11, color: mut)),
+                const SizedBox(height: 1),
+                Text(value?.toString() ?? '—', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: txt)),
+              ],
+            ),
+            Icon(Icons.expand_more_rounded, size: 14, color: mut),
+          ],
         ),
-        counterText: '',
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       ),
     );
   }
