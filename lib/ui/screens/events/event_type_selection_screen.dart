@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:event_app/core/constants/app_colors.dart';
-import 'package:event_app/core/constants/app_text_styles.dart';
-import 'package:event_app/core/theme/theme_provider.dart';
+import 'package:go_router/go_router.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/theme/theme_provider.dart';
 
 class EventTypeSelectionScreen extends StatelessWidget {
   const EventTypeSelectionScreen({super.key});
@@ -12,77 +10,76 @@ class EventTypeSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.watch<ThemeProvider>().isDarkMode;
-    
+    final txt = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final mut = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final fnt = isDark ? AppColors.textFaintDark : AppColors.textFaintLight;
+    final card = isDark ? AppColors.cardDark : AppColors.cardLight;
+    final line = isDark ? AppColors.lineDark : AppColors.lineLight;
+    final priSoft = isDark ? AppColors.primarySoftDark : AppColors.primarySoftLight;
+    final mintSoft = isDark ? AppColors.secondarySoftDark : AppColors.secondarySoftLight;
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-          ),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Tạo sự kiện mới',
-          style: AppTextStyles.heading3.copyWith(
-            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 24),
-            Text(
-              'Chọn loại sự kiện',
-              style: AppTextStyles.heading1.copyWith(
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                fontWeight: FontWeight.bold,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 4, 18, 0),
+              child: Row(
+                children: [
+                  IconButton(onPressed: () => context.pop(), icon: Icon(Icons.chevron_left_rounded, color: txt)),
+                  Text('Tạo sự kiện mới', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: txt)),
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Sự kiện này dành cho ai?',
-              style: AppTextStyles.body.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 34, 24, 26),
+              child: Column(
+                children: [
+                  Text('Chọn loại sự kiện', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: txt)),
+                  const SizedBox(height: 7),
+                  Text('Sự kiện này dành cho ai?', style: TextStyle(fontSize: 14, color: mut)),
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 48),
-            
             Expanded(
               child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 children: [
-                  _buildTypeCard(
-                    context: context,
-                    isDark: isDark,
+                  _typeCard(
+                    context,
+                    icon: '👨‍👩‍👧',
+                    bg: priSoft,
                     title: 'Liên kết với Người thân',
-                    subtitle: 'Sinh nhật, kỷ niệm, ngày giỗ...',
-                    icon: Icons.people_outline,
-                    iconBg: AppColors.iconBgPink,
-                    iconColor: AppColors.primaryLight,
+                    sub: 'Sinh nhật, kỷ niệm, ngày giỗ…',
+                    txt: txt,
+                    mut: mut,
+                    card: card,
+                    line: line,
                     onTap: () => context.push('/events/create?type=relative'),
-                  ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0, duration: 400.ms),
-                  
-                  const SizedBox(height: 24),
-                  
-                  _buildTypeCard(
-                    context: context,
-                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 13),
+                  _typeCard(
+                    context,
+                    icon: '📅',
+                    bg: mintSoft,
                     title: 'Sự kiện cho Bản thân',
-                    subtitle: 'Đóng tiền, thi cử, lịch học, cúng rằm...',
-                    icon: Icons.calendar_today_outlined,
-                    iconBg: AppColors.iconBgTeal,
-                    iconColor: AppColors.secondaryLight,
+                    sub: 'Đóng tiền, thi cử, lịch học, cúng rằm…',
+                    txt: txt,
+                    mut: mut,
+                    card: card,
+                    line: line,
                     onTap: () => context.push('/events/create?type=self'),
-                  ).animate().fadeIn(duration: 400.ms, delay: 200.ms).slideY(begin: 0.2, end: 0, duration: 400.ms, delay: 200.ms),
+                  ),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(30, 0, 30, 18),
+              child: Text(
+                'Sự kiện của người thân sẽ tự gắn vào hồ sơ người đó và nhắc theo lịch của họ.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: fnt, height: 1.55),
               ),
             ),
           ],
@@ -91,67 +88,37 @@ class EventTypeSelectionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTypeCard({
-    required BuildContext context,
-    required bool isDark,
+  Widget _typeCard(
+    BuildContext context, {
+    required String icon,
+    required Color bg,
     required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
+    required String sub,
+    required Color txt,
+    required Color mut,
+    required Color card,
+    required Color line,
     required VoidCallback onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 200,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 20),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? Colors.white12 : Colors.black12,
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: card,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: line),
+          boxShadow: [BoxShadow(color: isDark ? AppColors.shadowDark : AppColors.shadowLight, blurRadius: 10, offset: const Offset(0, 2))],
         ),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: iconBg,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: AppTextStyles.subtitle.copyWith(
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Container(width: 62, height: 62, decoration: BoxDecoration(color: bg, shape: BoxShape.circle), alignment: Alignment.center, child: Text(icon, style: const TextStyle(fontSize: 24))),
+            const SizedBox(height: 13),
+            Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: -0.3, color: txt)),
+            const SizedBox(height: 5),
+            Text(sub, style: TextStyle(fontSize: 12, color: mut), textAlign: TextAlign.center),
           ],
         ),
       ),
