@@ -1,81 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import 'package:event_app/providers/notification_provider.dart';
-import 'package:event_app/core/constants/app_colors.dart';
+import '../../core/constants/app_colors.dart';
 
 class BottomNavScaffold extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   const BottomNavScaffold({super.key, required this.navigationShell});
 
+  static const List<(IconData, String)> _items = [
+    (Icons.home_rounded, 'Home'),
+    (Icons.people_alt_rounded, 'Người thân'),
+    (Icons.calendar_month_rounded, 'Sự kiện'),
+    (Icons.person_rounded, 'Tôi'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final unreadCount = context.watch<NotificationProvider>().unreadCount;
+    final pri = isDark ? AppColors.primaryDark : AppColors.primaryLight;
+    final priSoft = isDark ? AppColors.primarySoftDark : AppColors.primarySoftLight;
+    final mut = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Scaffold(
       body: navigationShell,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
+          color: isDark ? AppColors.navBarDark : AppColors.navBarLight,
+          border: Border(top: BorderSide(color: isDark ? AppColors.lineDark : AppColors.lineLight)),
         ),
-        child: BottomNavigationBar(
-          currentIndex: navigationShell.currentIndex,
-          onTap: (index) {
-            navigationShell.goBranch(
-              index,
-              initialLocation: index == navigationShell.currentIndex,
-            );
-          },
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-          selectedItemColor: isDark ? AppColors.primaryDark : AppColors.primaryLight,
-          unselectedItemColor: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-          selectedFontSize: 12,
-          unselectedFontSize: 12,
-          elevation: 0,
-          items: [
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home_rounded),
-              label: 'Home',
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(_items.length, (i) {
+                final active = navigationShell.currentIndex == i;
+                final (icon, label) = _items[i];
+                return GestureDetector(
+                  onTap: () => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: active ? priSoft : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(icon, size: 20, color: active ? pri : mut),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          label,
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: active ? pri : mut),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.people_outline_rounded),
-              activeIcon: Icon(Icons.people_rounded),
-              label: 'Người thân',
-            ),
-            const BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_today_outlined),
-              activeIcon: Icon(Icons.calendar_today_rounded),
-              label: 'Sự kiện',
-            ),
-            BottomNavigationBarItem(
-              icon: unreadCount > 0
-                  ? Badge(
-                      label: Text('$unreadCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 9)),
-                      child: const Icon(Icons.person_outline_rounded),
-                    )
-                  : const Icon(Icons.person_outline_rounded),
-              activeIcon: unreadCount > 0
-                  ? Badge(
-                      label: Text('$unreadCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 9)),
-                      child: const Icon(Icons.person_rounded),
-                    )
-                  : const Icon(Icons.person_rounded),
-              label: 'Tôi',
-            ),
-          ],
+          ),
         ),
       ),
     );
