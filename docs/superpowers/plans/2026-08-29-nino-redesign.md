@@ -5643,7 +5643,8 @@ git commit -m "feat(nino): redesign Notifications screen"
 - [ ] **Step 1: Run the full analyzer**
 
 Run: `C:\flutter\bin\flutter.bat analyze`
-Expected: `No issues found!` — fix anything flagged (commonly: an old `AppColors` token name — `primaryGradient`, `headerGradient`, `tealGradient`, `accentGradient`, `surfaceLight`/`cardLight` used as a background that should now be `bgLight`/`pageLight` — still referenced somewhere Tasks 15-25 didn't touch, e.g. `splash_screen.dart`, `login_history_screen.dart`, `settings_screen.dart`, `google_signin_button.dart`, `google_logo.dart`). Update each remaining call site to the nearest Task 1 token (`coralGradient` for old brand gradients, `bgLight`/`bgDark` for scaffold backgrounds) and re-run until clean.
+
+Baseline (recorded before Task 1 ran, on this same branch point): **47 pre-existing issues**, all `info`-level lints or 2 pre-existing `warning`s (`unused_field` in `auth_provider.dart`, `unnecessary_null_comparison` in `event_form_screen.dart`) — none touched by this plan, not this task's job to fix. Expected after this task: the same ~47 baseline issues, **plus zero new ones** — specifically, no `error`-level output (a compile error), and no lint on any file Tasks 1-25 created or modified. If analyze reports a new issue on a file this plan touched, it is very likely a leftover old `AppColors` token — `primaryGradient`, `headerGradient`, `tealGradient`, `accentGradient`, `surfaceLight`/`cardLight` used as a scaffold background — referenced somewhere Tasks 15-25 didn't touch (e.g. `splash_screen.dart`, `login_history_screen.dart`, `settings_screen.dart`, `google_signin_button.dart`, `google_logo.dart`). Update each remaining call site to the nearest Task 1 token (`coralGradient` for old brand gradients, `bgLight`/`bgDark` for scaffold backgrounds) and re-run until only the pre-existing baseline issues remain.
 
 - [ ] **Step 2: Run the full test suite**
 
