@@ -244,9 +244,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              gradient: event.daysUntil == 0
-                  ? AppColors.accentGradient
-                  : AppColors.primaryGradient,
+              gradient: AppColors.coralGradient,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
