@@ -17,7 +17,7 @@ import '../../ui/screens/relatives/relative_detail_screen.dart';
 import '../../ui/screens/notifications/notification_screen.dart';
 import '../../ui/screens/profile/profile_screen.dart';
 import '../../ui/screens/profile/login_history_screen.dart';
-import '../../ui/screens/settings/settings_screen.dart';
+import '../../ui/screens/profile/edit_profile_screen.dart';
 import '../../ui/widgets/bottom_nav_scaffold.dart';
 
 /// Quyết định điều hướng của [GoRouter.redirect] dựa trên trạng thái đăng
@@ -174,7 +174,7 @@ class AppRouter {
                   routes: [
                     GoRoute(
                       path: 'settings',
-                      builder: (context, state) => const SettingsScreen(),
+                      builder: (context, state) => const EditProfileScreen(),
                     ),
                     GoRoute(
                       path: 'notifications',
