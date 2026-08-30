@@ -323,7 +323,11 @@ class _EventFormScreenState extends State<EventFormScreen> {
     final provider = context.read<EventProvider>();
     final future = widget.eventId != null ? provider.updateEvent(widget.eventId!, data) : provider.createEvent(data);
     future.then((success) {
-      if (success && mounted) context.pop();
+      // Luôn thoát thẳng về màn Sự kiện khi lưu thành công — dù được mở từ
+      // đâu (chọn loại sự kiện, chi tiết người thân, Lịch nghỉ lễ, hay sửa
+      // từ màn chi tiết sự kiện), không dừng lại ở màn trung gian đã push
+      // qua như context.pop() từng làm.
+      if (success && mounted) context.go('/events');
     });
   }
 
