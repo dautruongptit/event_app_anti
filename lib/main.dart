@@ -33,7 +33,17 @@ void main() async {
   final relativeService = RelativeService(dioClient);
   final notificationService = NotificationService(dioClient);
   final deviceService = DeviceService(dioClient);
-  final fcmService = FcmService(deviceService);
+  // Tạo trước MultiProvider để FcmService gọi được thẳng vào đây khi có
+  // push lúc app đang mở (foreground) — cập nhật badge chuông + kích hoạt
+  // hiệu ứng rung, không phải đợi người dùng tự mở màn Thông báo.
+  final notificationProvider = NotificationProvider(notificationService);
+  final fcmService = FcmService(
+    deviceService,
+    onForegroundMessage: () {
+      notificationProvider.loadUnreadCount();
+      notificationProvider.notifyNewNotification();
+    },
+  );
   // Phải init trước runApp: đăng ký background handler của FCM chỉ có tác
   // dụng nếu gọi trước khi app thực sự chạy.
   await fcmService.init();
@@ -51,7 +61,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => HomeProvider(homeService)),
         ChangeNotifierProvider(create: (_) => EventProvider(eventService)),
         ChangeNotifierProvider(create: (_) => RelativeProvider(relativeService)),
-        ChangeNotifierProvider(create: (_) => NotificationProvider(notificationService)),
+        ChangeNotifierProvider.value(value: notificationProvider),
       ],
       child: const AppWidget(),
     ),

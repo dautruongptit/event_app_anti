@@ -14,6 +14,7 @@ class NotificationProvider extends ChangeNotifier {
   int _currentPage = 0;
   int _totalPages = 1;
   bool _hasMore = true;
+  int _newNotificationTick = 0;
 
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -22,6 +23,12 @@ class NotificationProvider extends ChangeNotifier {
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   bool get hasMore => _hasMore;
+
+  /// Tăng mỗi khi có 1 push FCM đến lúc app đang mở (foreground) — UI (biểu
+  /// tượng chuông) theo dõi giá trị này để kích hoạt hiệu ứng rung, kể cả
+  /// khi unreadCount không đổi giữa 2 lần tick (VD: người dùng đang mở màn
+  /// Thông báo, chưa kịp reload count, nhưng vẫn nên thấy chuông rung).
+  int get newNotificationTick => _newNotificationTick;
 
   Future<void> loadNotifications({bool refresh = false}) async {
     if (refresh) {
@@ -91,6 +98,15 @@ class NotificationProvider extends ChangeNotifier {
     } catch (e) {
       _setError(e.toString());
     }
+  }
+
+  /// Gọi từ FcmService khi nhận được push lúc app đang foreground — không
+  /// tự cộng unreadCount ở đây (số chính xác luôn đến từ loadUnreadCount()
+  /// gọi backend), chỉ dùng để báo UI "vừa có thông báo mới, hãy rung
+  /// chuông".
+  void notifyNewNotification() {
+    _newNotificationTick++;
+    notifyListeners();
   }
 
   void clearError() {

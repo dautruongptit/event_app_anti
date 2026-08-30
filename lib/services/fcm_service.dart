@@ -34,7 +34,12 @@ class FcmService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
-  FcmService(this._deviceService);
+  /// Gọi mỗi khi nhận được 1 push lúc app đang mở (foreground) — dùng để
+  /// báo UI (badge chuông, hiệu ứng rung) thay vì để FcmService biết về
+  /// NotificationProvider trực tiếp (giữ service không phụ thuộc UI layer).
+  final VoidCallback? onForegroundMessage;
+
+  FcmService(this._deviceService, {this.onForegroundMessage});
 
   String? _currentToken;
 
@@ -99,6 +104,8 @@ class FcmService {
   void _showLocalNotification(RemoteMessage message) {
     final notification = message.notification;
     if (notification == null) return;
+
+    onForegroundMessage?.call();
 
     _localNotifications.show(
       message.hashCode,

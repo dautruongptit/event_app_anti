@@ -12,6 +12,7 @@ import '../../widgets/nino/nino_logo.dart';
 import '../../widgets/nino/initials_avatar.dart';
 import '../../widgets/nino/card_row.dart';
 import '../../widgets/nino/pill_tabs.dart';
+import '../../widgets/nino/shake_on_change.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,6 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<HomeProvider>().refresh();
+      // Trước đây chỉ được gọi khi mở màn Thông báo — badge số chưa đọc ở
+      // chuông trên Home luôn hiện sai/0 cho tới khi người dùng tự bấm vào
+      // chuông ít nhất 1 lần trong phiên. Tải ngay khi vào Home để badge
+      // đúng ngay từ đầu.
+      context.read<NotificationProvider>().loadUnreadCount();
     });
   }
 
@@ -46,7 +52,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final homeData = homeProvider.homeData;
     final userName = homeData?.userName ?? user?.fullName ?? 'Khách';
     final avatarUrl = homeData?.avatarUrl ?? user?.avatarUrl;
-    final unreadCount = context.watch<NotificationProvider>().unreadCount;
+    final notificationProvider = context.watch<NotificationProvider>();
+    final unreadCount = notificationProvider.unreadCount;
+    final newNotificationTick = notificationProvider.newNotificationTick;
 
     final txt = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final mut = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
@@ -66,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? const Center(child: CircularProgressIndicator())
               : CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: _buildHeader(context, userName, avatarUrl, isDark, unreadCount, txt, mut, card, line)),
+                    SliverToBoxAdapter(child: _buildHeader(context, userName, avatarUrl, isDark, unreadCount, newNotificationTick, txt, mut, card, line)),
                     if (homeData != null && homeData.upcomingEvents.isNotEmpty)
                       SliverToBoxAdapter(child: _buildUpcomingEventsSection(context, homeData.upcomingEvents, txt, mut, pri)),
                     const SliverToBoxAdapter(child: SizedBox(height: 20)),
@@ -95,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader(BuildContext context, String userName, String? avatarUrl, bool isDark, int unreadCount,
-      Color txt, Color mut, Color card, Color line) {
+      int newNotificationTick, Color txt, Color mut, Color card, Color line) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
       child: Row(
@@ -148,10 +156,13 @@ class _HomeScreenState extends State<HomeScreen> {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  IconButton(
-                    onPressed: () => context.push('/profile/notifications'),
-                    icon: Icon(Icons.notifications_none_rounded, color: mut, size: 21),
-                    style: IconButton.styleFrom(backgroundColor: card, shape: CircleBorder(side: BorderSide(color: line))),
+                  ShakeOnChange(
+                    trigger: newNotificationTick,
+                    child: IconButton(
+                      onPressed: () => context.push('/profile/notifications'),
+                      icon: Icon(Icons.notifications_none_rounded, color: mut, size: 21),
+                      style: IconButton.styleFrom(backgroundColor: card, shape: CircleBorder(side: BorderSide(color: line))),
+                    ),
                   ),
                   if (unreadCount > 0)
                     Positioned(
