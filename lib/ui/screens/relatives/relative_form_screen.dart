@@ -89,13 +89,24 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
 
   void _removeHobby(String hobby) => setState(() => _hobbies.remove(hobby));
 
-  /// Nếu ngày sinh đang chọn vượt quá số ngày thực tế của tháng/năm hiện tại,
-  /// hạ xuống ngày cuối cùng hợp lệ của tháng đó thay vì để DateTime() tự
-  /// động cuộn sang tháng sau một cách âm thầm.
+  /// Số ngày tối đa hợp lệ cho [month], khi năm sinh có thể chưa được chọn.
+  /// Nếu chưa biết năm, giả định một năm nhuận (2024) để tháng 2 vẫn cho
+  /// phép 29 ngày — tránh việc năm hiện tại (lúc mở app) tình cờ không
+  /// nhuận lại âm thầm chặn/hạ một ngày 29/2 hợp lệ trước khi người dùng
+  /// kịp chọn năm sinh thật.
+  int _maxDobDayFor(int? month, int? year) {
+    if (month == null) return 31;
+    return DateUtils.getDaysInMonth(year ?? 2024, month);
+  }
+
+  /// Nếu ngày sinh đang chọn vượt quá số ngày thực tế của tháng/năm ĐÃ CHỌN
+  /// ĐẦY ĐỦ CẢ HAI, hạ xuống ngày cuối cùng hợp lệ của tháng đó thay vì để
+  /// DateTime() tự động cuộn sang tháng sau một cách âm thầm. Chỉ validate
+  /// chính xác khi đã biết cả năm lẫn tháng — nếu năm chưa chọn, chưa có
+  /// bằng chứng thật để hạ một ngày 29/2 đang chọn xuống 28.
   void _clampDobDay() {
-    if (_dobDay == null || _dobMonth == null) return;
-    final year = _dobYear ?? DateTime.now().year;
-    final maxDay = DateUtils.getDaysInMonth(year, _dobMonth!);
+    if (_dobDay == null || _dobMonth == null || _dobYear == null) return;
+    final maxDay = DateUtils.getDaysInMonth(_dobYear!, _dobMonth!);
     if (_dobDay! > maxDay) _dobDay = maxDay;
   }
 
@@ -105,12 +116,9 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
     late final String title;
     late final int? current;
     if (part == 'day') {
-      // Số ngày phụ thuộc tháng/năm đã chọn (mặc định năm hiện tại và
-      // đủ 31 ngày nếu tháng chưa được chọn) để tránh cho phép chọn
-      // ngày không tồn tại (vd 31/2).
-      final maxDay = _dobMonth != null
-          ? DateUtils.getDaysInMonth(_dobYear ?? now.year, _dobMonth!)
-          : 31;
+      // Số ngày phụ thuộc tháng đã chọn (và năm nếu đã có) để tránh cho
+      // phép chọn ngày không tồn tại (vd 31/2) — xem _maxDobDayFor.
+      final maxDay = _maxDobDayFor(_dobMonth, _dobYear);
       range = List.generate(maxDay, (i) => i + 1);
       title = 'Chọn ngày sinh';
       current = _dobDay;
