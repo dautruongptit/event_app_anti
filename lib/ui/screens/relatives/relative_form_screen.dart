@@ -321,14 +321,12 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
                         ),
                         const SizedBox(height: 18),
                         Text('Giới tính', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
-                        const SizedBox(height: 7),
+                        const SizedBox(height: 4),
                         Row(
                           children: [
-                            _genderChip('MALE', 'Nam', mut, pri, priSoft, line2),
-                            const SizedBox(width: 8),
-                            _genderChip('FEMALE', 'Nữ', mut, pri, priSoft, line2),
-                            const SizedBox(width: 8),
-                            _genderChip('OTHER', 'Khác', mut, pri, priSoft, line2),
+                            _genderRadio('MALE', 'Nam', txt, pri),
+                            _genderRadio('FEMALE', 'Nữ', txt, pri),
+                            _genderRadio('OTHER', 'Khác', txt, pri),
                           ],
                         ),
                         const SizedBox(height: 18),
@@ -438,20 +436,25 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
     );
   }
 
-  Widget _genderChip(String value, String label, Color mut, Color pri, Color priSoft, Color line2) {
-    final isSelected = _gender == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _gender = value),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? priSoft : Colors.transparent,
-            border: Border.all(color: isSelected ? pri : line2, width: 1.5),
-            borderRadius: BorderRadius.circular(15),
-          ),
-          alignment: Alignment.center,
-          child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: isSelected ? pri : mut)),
+  Widget _genderRadio(String value, String label, Color txt, Color pri) {
+    return GestureDetector(
+      onTap: () => setState(() => _gender = value),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 18),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Radio<String>(
+              value: value,
+              groupValue: _gender,
+              onChanged: (v) => setState(() => _gender = v!),
+              activeColor: pri,
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            const SizedBox(width: 2),
+            Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: txt)),
+          ],
         ),
       ),
     );
