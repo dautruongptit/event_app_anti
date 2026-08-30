@@ -17,8 +17,30 @@ import '../../ui/screens/relatives/relative_detail_screen.dart';
 import '../../ui/screens/notifications/notification_screen.dart';
 import '../../ui/screens/profile/profile_screen.dart';
 import '../../ui/screens/profile/login_history_screen.dart';
-import '../../ui/screens/settings/settings_screen.dart';
+import '../../ui/screens/profile/edit_profile_screen.dart';
 import '../../ui/widgets/bottom_nav_scaffold.dart';
+
+/// Quyết định điều hướng của [GoRouter.redirect] dựa trên trạng thái đăng
+/// nhập và route đang khớp — tách riêng thành hàm thuần để test được không
+/// cần dựng cả GoRouter/BuildContext.
+///
+/// Đã đăng nhập (kể cả phiên cũ khôi phục lại, không phải vừa login/register)
+/// mà đang ở màn splash/login/register -> vào thẳng Home, không kẹt lại màn
+/// quảng cáo splash (xem lịch sử: "kẹt ở màn splash" khi mở lại app).
+String? decideRedirect({required bool isLoggedIn, required String matchedLocation}) {
+  final isAuthRoute = matchedLocation == '/login' || matchedLocation == '/register';
+  final isSplashRoute = matchedLocation == '/splash';
+
+  if (!isLoggedIn && !isAuthRoute && !isSplashRoute) {
+    return '/login';
+  }
+
+  if (isLoggedIn && (isAuthRoute || isSplashRoute)) {
+    return '/home';
+  }
+
+  return null;
+}
 
 class AppRouter {
   static final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -35,18 +57,7 @@ class AppRouter {
         final prefs = await SharedPreferences.getInstance();
         final token = prefs.getString('accessToken');
         final isLoggedIn = token != null && token.isNotEmpty;
-        final isAuthRoute = state.matchedLocation == '/login' || state.matchedLocation == '/register';
-        final isSplashRoute = state.matchedLocation == '/splash';
-
-        if (!isLoggedIn && !isAuthRoute && !isSplashRoute) {
-          return '/login';
-        }
-
-        if (isLoggedIn && isAuthRoute) {
-          return '/home';
-        }
-
-        return null;
+        return decideRedirect(isLoggedIn: isLoggedIn, matchedLocation: state.matchedLocation);
       },
       routes: [
         GoRoute(
@@ -163,7 +174,7 @@ class AppRouter {
                   routes: [
                     GoRoute(
                       path: 'settings',
-                      builder: (context, state) => const SettingsScreen(),
+                      builder: (context, state) => const EditProfileScreen(),
                     ),
                     GoRoute(
                       path: 'notifications',

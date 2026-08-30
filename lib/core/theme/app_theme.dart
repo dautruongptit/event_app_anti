@@ -44,6 +44,8 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.cardLight,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(color: AppColors.line2Light),
@@ -144,6 +146,8 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.cardDark,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(15),
           borderSide: const BorderSide(color: AppColors.line2Dark),
