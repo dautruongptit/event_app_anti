@@ -171,12 +171,17 @@ class ReminderModel {
   final int? remindDaysBefore;
   final int? remindHoursBefore;
   final bool isEnabled;
+  /// Nếu có giá trị: sau lần bắn đầu tiên, tự bắn lại mỗi N phút cho tới khi
+  /// người dùng đọc thông báo (VD: nhắc uống thuốc mỗi 30 phút) — khớp
+  /// EventReminder.repeatIntervalMinutes bên backend.
+  final int? repeatIntervalMinutes;
 
   const ReminderModel({
     this.id,
     this.remindDaysBefore,
     this.remindHoursBefore,
     this.isEnabled = true,
+    this.repeatIntervalMinutes,
   });
 
   factory ReminderModel.fromJson(Map<String, dynamic> json) {
@@ -185,6 +190,7 @@ class ReminderModel {
       remindDaysBefore: json['remindDaysBefore'] as int?,
       remindHoursBefore: json['remindHoursBefore'] as int?,
       isEnabled: json['isEnabled'] as bool? ?? true,
+      repeatIntervalMinutes: json['repeatIntervalMinutes'] as int?,
     );
   }
 

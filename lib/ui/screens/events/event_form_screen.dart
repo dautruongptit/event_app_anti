@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../providers/event_provider.dart';
 import '../../../providers/relative_provider.dart';
+import '../../../models/event.dart';
 import '../../widgets/nino/bottom_option_sheet.dart';
 import '../../widgets/nino/soft_toggle.dart';
 import '../../widgets/nino/sticky_action_bars.dart';
@@ -119,12 +120,20 @@ class _EventFormScreenState extends State<EventFormScreen> {
         _selectedCategoryKey = cat.key;
       } catch (_) {}
 
+      // Giữ lại MỌI reminder đang bật, kể cả loại không khớp 1 trong 5
+      // preset chuẩn (VD: "lặp mỗi N phút cho tới khi đọc" — nhắc uống
+      // thuốc). Bản cũ chỉ nhận diện đúng 4 tổ hợp cố định, mọi reminder
+      // khác bị BỎ QUA hoàn toàn khi tải để sửa — dẫn tới lưu lại là xoá
+      // sạch reminder gốc dù người dùng không đụng vào mục Nhắc nhở.
       _reminders.clear();
       for (final r in event.reminders) {
-        if (r.remindDaysBefore == 7 && r.isEnabled) _reminders.add(_ReminderItem(label: '7 ngày trước', daysBefore: 7));
-        if (r.remindDaysBefore == 3 && r.isEnabled) _reminders.add(_ReminderItem(label: '3 ngày trước', daysBefore: 3));
-        if (r.remindDaysBefore == 1 && r.isEnabled) _reminders.add(_ReminderItem(label: '1 ngày trước', daysBefore: 1));
-        if (r.remindHoursBefore == 1 && r.isEnabled) _reminders.add(_ReminderItem(label: '1 giờ trước', hoursBefore: 1));
+        if (!r.isEnabled) continue;
+        _reminders.add(_ReminderItem(
+          label: _reminderLabel(r),
+          daysBefore: r.remindDaysBefore,
+          hoursBefore: r.remindHoursBefore,
+          repeatIntervalMinutes: r.repeatIntervalMinutes,
+        ));
       }
       _notesController.text = event.notes ?? '';
     });
@@ -300,10 +309,20 @@ class _EventFormScreenState extends State<EventFormScreen> {
       showNinoToast(context, 'Vui lòng nhập tên sự kiện');
       return;
     }
+    // Gộp mỗi _ReminderItem thành ĐÚNG 1 reminder (khớp shape 1 EventReminder
+    // bên backend) thay vì tách daysBefore/hoursBefore thành 2 dòng riêng —
+    // trước đây "> 0" còn vô tình loại bỏ hoursBefore=0 (giá trị hợp lệ,
+    // dùng cho reminder "lặp mỗi N phút" như nhắc uống thuốc), khiến nó
+    // không bao giờ thực sự được lưu dù vẫn hiện đúng dạng chip trên UI.
     final reminders = <Map<String, dynamic>>[];
     for (final r in _reminders) {
-      if (r.daysBefore != null && r.daysBefore! > 0) reminders.add({'remindDaysBefore': r.daysBefore, 'isEnabled': true});
-      if (r.hoursBefore != null && r.hoursBefore! > 0) reminders.add({'remindHoursBefore': r.hoursBefore, 'isEnabled': true});
+      if (r.daysBefore == null && r.hoursBefore == null && r.repeatIntervalMinutes == null) continue;
+      reminders.add({
+        'isEnabled': true,
+        if (r.daysBefore != null) 'remindDaysBefore': r.daysBefore,
+        if (r.hoursBefore != null) 'remindHoursBefore': r.hoursBefore,
+        if (r.repeatIntervalMinutes != null) 'repeatIntervalMinutes': r.repeatIntervalMinutes,
+      });
     }
     final data = {
       'title': _titleController.text.trim(),
@@ -337,6 +356,23 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   String _formatTime(TimeOfDay t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+
+  /// Nhãn hiển thị khi tải 1 reminder có sẵn từ sự kiện đang sửa. Ưu tiên
+  /// đúng nhãn của 5 preset chuẩn (khớp _reminderOptions) để hiển thị nhất
+  /// quán với sheet "Thêm nhắc nhở"; các tổ hợp khác (VD: lặp lại mỗi N
+  /// phút cho tới khi đọc — nhắc uống thuốc) hiện nhãn mô tả chung thay vì
+  /// bị bỏ qua.
+  String _reminderLabel(ReminderModel r) {
+    if (r.repeatIntervalMinutes != null) return 'Mỗi ${r.repeatIntervalMinutes} phút';
+    if (r.remindDaysBefore == 7) return '7 ngày trước';
+    if (r.remindDaysBefore == 3) return '3 ngày trước';
+    if (r.remindDaysBefore == 1) return '1 ngày trước';
+    if (r.remindHoursBefore == 1) return '1 giờ trước';
+    if (r.remindHoursBefore == 0) return '30 phút trước';
+    if (r.remindDaysBefore != null) return '${r.remindDaysBefore} ngày trước';
+    if (r.remindHoursBefore != null) return '${r.remindHoursBefore} giờ trước';
+    return 'Nhắc nhở';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -651,5 +687,10 @@ class _ReminderItem {
   final String label;
   final int? daysBefore;
   final int? hoursBefore;
-  _ReminderItem({required this.label, this.daysBefore, this.hoursBefore});
+  /// Nếu có giá trị: reminder kiểu "lặp lại mỗi N phút cho tới khi đọc"
+  /// (VD: nhắc uống thuốc) — không có ô chọn riêng trong sheet "Thêm nhắc
+  /// nhở" (chỉ 5 preset chuẩn), nhưng vẫn phải giữ nguyên khi sửa sự kiện
+  /// đã có sẵn loại này, không được để trống khi lưu.
+  final int? repeatIntervalMinutes;
+  _ReminderItem({required this.label, this.daysBefore, this.hoursBefore, this.repeatIntervalMinutes});
 }
