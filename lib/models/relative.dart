@@ -51,7 +51,10 @@ class RelativeModel {
           : null,
       avatarUrl: json['avatarUrl'] as String?,
       totalEvents: json['totalEvents'] as int?,
-      daysUntilBirthday: json['daysUntilBirthday'] as int?,
+      // Backend (RelativeResponse.java) trả field tên "daysToBirthday",
+      // không phải "daysUntilBirthday" — đọc sai key khiến đếm ngược sinh
+      // nhật luôn null dù backend đã tính đúng.
+      daysUntilBirthday: (json['daysToBirthday'] as num?)?.toInt(),
       nextEventTitle: json['nextEventTitle'] as String?,
     );
   }
@@ -152,11 +155,27 @@ class RelativeDetailModel {
           ? List<String>.from(json['hobbies'])
           : null,
       avatarUrl: json['avatarUrl'] as String?,
-      daysUntilBirthday: json['daysUntilBirthday'] as int?,
-      relatedEvents: json['relatedEvents'] != null
-          ? (json['relatedEvents'] as List)
-              .map((e) => EventModel.fromJson(e))
-              .toList()
+      // Backend (RelativeDetailResponse.java) trả field tên "daysToBirthday",
+      // không phải "daysUntilBirthday".
+      daysUntilBirthday: (json['daysToBirthday'] as num?)?.toInt(),
+      // Backend trả field tên "events" (RelativeDetailResponse.RelatedEventSummary:
+      // id/title/categoryCode/eventDate/isActive — KHÔNG có categoryId/
+      // categoryIcon/categoryColor/daysUntil như EventModel đầy đủ), không
+      // phải "relatedEvents" — đọc sai key khiến màn chi tiết luôn hiện
+      // "chưa có sự kiện nào" dù người thân đã có sự kiện liên kết.
+      // daysUntil không có sẵn trong summary rút gọn này nên tự tính từ
+      // eventDate để hiện đúng "Còn N ngày" như các màn khác.
+      relatedEvents: json['events'] != null
+          ? (json['events'] as List).map((e) {
+              final map = Map<String, dynamic>.from(e as Map);
+              final eventDate = DateTime.parse(map['eventDate'] as String);
+              final today = DateTime.now();
+              final todayDate = DateTime(today.year, today.month, today.day);
+              return EventModel.fromJson({
+                ...map,
+                'daysUntil': eventDate.difference(todayDate).inDays,
+              });
+            }).toList()
           : [],
     );
   }
