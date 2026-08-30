@@ -89,13 +89,29 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
 
   void _removeHobby(String hobby) => setState(() => _hobbies.remove(hobby));
 
+  /// Nếu ngày sinh đang chọn vượt quá số ngày thực tế của tháng/năm hiện tại,
+  /// hạ xuống ngày cuối cùng hợp lệ của tháng đó thay vì để DateTime() tự
+  /// động cuộn sang tháng sau một cách âm thầm.
+  void _clampDobDay() {
+    if (_dobDay == null || _dobMonth == null) return;
+    final year = _dobYear ?? DateTime.now().year;
+    final maxDay = DateUtils.getDaysInMonth(year, _dobMonth!);
+    if (_dobDay! > maxDay) _dobDay = maxDay;
+  }
+
   Future<void> _pickDatePart(String part) async {
     final now = DateTime.now();
     late final List<int> range;
     late final String title;
     late final int? current;
     if (part == 'day') {
-      range = List.generate(31, (i) => i + 1);
+      // Số ngày phụ thuộc tháng/năm đã chọn (mặc định năm hiện tại và
+      // đủ 31 ngày nếu tháng chưa được chọn) để tránh cho phép chọn
+      // ngày không tồn tại (vd 31/2).
+      final maxDay = _dobMonth != null
+          ? DateUtils.getDaysInMonth(_dobYear ?? now.year, _dobMonth!)
+          : 31;
+      range = List.generate(maxDay, (i) => i + 1);
       title = 'Chọn ngày sinh';
       current = _dobDay;
     } else if (part == 'month') {
@@ -119,8 +135,14 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
                   Navigator.of(context).pop();
                   setState(() {
                     if (part == 'day') _dobDay = v;
-                    if (part == 'month') _dobMonth = v;
-                    if (part == 'year') _dobYear = v;
+                    if (part == 'month') {
+                      _dobMonth = v;
+                      _clampDobDay();
+                    }
+                    if (part == 'year') {
+                      _dobYear = v;
+                      _clampDobDay();
+                    }
                   });
                 },
               ))

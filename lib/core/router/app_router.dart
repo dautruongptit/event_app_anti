@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Screens
-import '../../ui/screens/splash_screen.dart';
 import '../../ui/screens/auth/login_screen.dart';
 import '../../ui/screens/auth/register_screen.dart';
 import '../../ui/screens/home/home_screen.dart';
@@ -52,7 +51,7 @@ class AppRouter {
       routes: [
         GoRoute(
           path: '/splash',
-          builder: (context, state) => const SplashScreen(),
+          builder: (context, state) => const LoginScreen(),
         ),
         GoRoute(
           path: '/login',
