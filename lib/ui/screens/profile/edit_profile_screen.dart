@@ -87,6 +87,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (_dobDay! > maxDay) _dobDay = maxDay;
   }
 
+  /// Chọn ngày sinh theo chuỗi tuần tự ngày → tháng → năm (chọn xong 1 phần
+  /// tự mở tiếp sheet phần sau) — khớp đúng luồng `_pickDobStep` của
+  /// [RelativeFormScreen] để 1 điểm chạm "Ngày sinh" duy nhất, không phải 3
+  /// ô độc lập như trước (2 màn "sửa hồ sơ"/"sửa người thân" giờ đồng nhất).
   Future<void> _pickDatePart(String part) async {
     final now = DateTime.now();
     late final List<int> range;
@@ -106,6 +110,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       title = 'Chọn năm sinh';
       current = _dobYear;
     }
+    final next = const {'day': 'month', 'month': 'year', 'year': null}[part];
     await showBottomOptionSheet(
       context: context,
       title: title,
@@ -127,6 +132,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       _clampDobDay();
                     }
                   });
+                  if (next != null) _pickDatePart(next);
                 },
               ))
           .toList(),
@@ -288,29 +294,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         const SizedBox(height: 18),
                         _formRow(
                           label: Text('Ngày sinh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
-                          field: Row(
-                            children: [
-                              Expanded(child: _dobPart('Ngày', _dobDay, () => _pickDatePart('day'), txt, mut, card, line2)),
-                              const SizedBox(width: 8),
-                              Expanded(child: _dobPart('Tháng', _dobMonth, () => _pickDatePart('month'), txt, mut, card, line2)),
-                              const SizedBox(width: 8),
-                              Expanded(child: _dobPart('Năm', _dobYear, () => _pickDatePart('year'), txt, mut, card, line2)),
-                            ],
-                          ),
+                          field: _dobField(txt, fnt, card, line2),
                         ),
                         const SizedBox(height: 32),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : _submit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: pri,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            ),
-                            child: const Text('Lưu thông tin', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -361,24 +347,29 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _dobPart(String label, int? value, VoidCallback onTap, Color txt, Color mut, Color card, Color border) {
+  /// Ô "Ngày sinh" — 1 ô duy nhất mở sheet chọn tuần tự (xem
+  /// [_pickDatePart]), cùng style Container/border với ô Email ngay phía
+  /// trên (thay vì 3 ô Ngày/Tháng/Năm tách rời như trước — không đồng nhất
+  /// với các field khác trong cùng form).
+  Widget _dobField(Color txt, Color fnt, Color card, Color border) {
+    final hasDob = _dobDay != null && _dobMonth != null && _dobYear != null;
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => _pickDatePart('day'),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
-        decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(15), border: Border.all(color: border, width: 1.5)),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+        decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(15), border: Border.all(color: border)),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: TextStyle(fontSize: 11, color: mut)),
-                const SizedBox(height: 1),
-                Text(value?.toString() ?? '—', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: txt)),
-              ],
+            Expanded(
+              child: Text(
+                hasDob
+                    ? '${_dobDay.toString().padLeft(2, '0')}/${_dobMonth.toString().padLeft(2, '0')}/$_dobYear'
+                    : 'Chọn ngày sinh',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: hasDob ? txt : fnt),
+              ),
             ),
-            Icon(Icons.expand_more_rounded, size: 14, color: mut),
+            Icon(Icons.calendar_today_rounded, size: 15, color: fnt),
           ],
         ),
       ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../providers/relative_provider.dart';
+import '../../../providers/home_provider.dart';
 import '../../widgets/nino/bottom_option_sheet.dart';
 import '../../widgets/nino/nino_toast.dart';
 import '../../widgets/nino/sticky_action_bars.dart';
@@ -206,6 +207,11 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
         .deleteRelative(widget.relativeId!);
     if (mounted && success) {
       showNinoToast(context, 'Đã xoá người thân');
+      // HomeProvider có snapshot người thân/sự kiện riêng, không tự đồng bộ
+      // với RelativeProvider — nếu không refresh ở đây, quay về Home (có
+      // thể pop thẳng về Home nếu vào từ đó, không qua chuyển tab) sẽ vẫn
+      // hiện dữ liệu cũ.
+      context.read<HomeProvider>().refresh();
       context.go('/relatives');
     }
   }
@@ -249,6 +255,11 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
     if (success && mounted) {
       showNinoToast(context,
           widget.relativeId == null ? 'Đã thêm người thân' : 'Đã lưu thay đổi');
+      // HomeProvider có snapshot người thân/sự kiện riêng, không tự đồng bộ
+      // với RelativeProvider — nếu không refresh ở đây, quay về Home (có
+      // thể pop thẳng về Home nếu vào từ đó, không qua chuyển tab) sẽ vẫn
+      // hiện dữ liệu cũ (VD: "Quan hệ" vừa sửa không cập nhật).
+      context.read<HomeProvider>().refresh();
       context.pop();
     }
   }
@@ -289,13 +300,27 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: txt)),
-                      TextButton(
-                        onPressed: isLoading ? null : _submit,
-                        child: Text('Lưu',
-                            style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: pri)),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Xoá chỉ hiện khi đang sửa (không có ở màn Thêm
+                          // mới) — trước đây là nút riêng ở cuối form, gộp
+                          // lên đây ngang hàng với Lưu để chỉ còn 1 khu vực
+                          // hành động duy nhất trên đầu màn.
+                          if (isEditing)
+                            IconButton(
+                              onPressed: isLoading ? null : _confirmDelete,
+                              icon: Icon(Icons.delete_outline_rounded, color: danger),
+                            ),
+                          TextButton(
+                            onPressed: isLoading ? null : _submit,
+                            child: Text('Lưu',
+                                style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: pri)),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -315,7 +340,13 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
                           onTap: () => showBottomOptionSheet(
                             context: context,
                             title: 'Quan hệ',
+                            // "Bản thân" không cho chọn ở đây (thêm mới lẫn
+                            // sửa) — mục người thân là để quản lý NGƯỜI KHÁC,
+                            // không phải chính người dùng. Vẫn giữ trong
+                            // _groupTypes để hiển thị đúng nếu dữ liệu cũ lỡ
+                            // mang giá trị này.
                             options: _groupTypes.entries
+                                .where((e) => e.key != 'BAN_THAN')
                                 .map((e) => NinoOption(
                                       label: e.value.$1,
                                       icon: e.value.$2,
@@ -564,56 +595,6 @@ class _RelativeFormScreenState extends State<RelativeFormScreen> {
                           ),
                         ),
                         const SizedBox(height: 26),
-                        Row(
-                          children: [
-                            if (isEditing)
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: isLoading ? null : _confirmDelete,
-                                  style: OutlinedButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 15),
-                                    backgroundColor: isDark
-                                        ? AppColors.errorSoftDark
-                                        : AppColors.errorSoftLight,
-                                    side: BorderSide(
-                                        color: isDark
-                                            ? AppColors.errorSoftDark
-                                            : AppColors.errorSoftLight),
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(999)),
-                                  ),
-                                  child: Text('Xoá',
-                                      style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: danger)),
-                                ),
-                              ),
-                            if (isEditing) const SizedBox(width: 10),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: isLoading ? null : _submit,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: pri,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(999)),
-                                ),
-                                child: Text(
-                                    isEditing
-                                        ? 'Lưu thay đổi'
-                                        : 'Lưu người thân',
-                                    style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white)),
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),

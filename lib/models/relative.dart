@@ -94,6 +94,27 @@ class RelativeModel {
     return map[groupType] ?? groupType;
   }
 
+  /// Emoji đại diện quan hệ — khớp đúng bộ icon dùng ở picker "Quan hệ"
+  /// (RelativeFormScreen._groupTypes) để avatar và picker luôn đồng nhất.
+  String get groupTypeEmoji {
+    const map = {
+      'GIA_DINH': '👨‍👩‍👧',
+      'CON_CAI': '👶',
+      'BAN_BE': '👤',
+      'BAN_THAN': '🧑',
+      'ONG': '👴',
+      'BA': '👵',
+      'BO': '👨',
+      'ME': '👩',
+      'VO_CHONG': '💍',
+      'ANH_CHI_EM': '🧒',
+      'CON': '👶',
+      'NGUOI_YEU': '💕',
+      'NGUOI_THAN': '👤',
+    };
+    return map[groupType] ?? '👤';
+  }
+
   String get genderDisplay {
     const map = {
       'MALE': 'Nam',
@@ -205,6 +226,27 @@ class RelativeDetailModel {
       'NGUOI_THAN': 'Người Thân',
     };
     return map[groupType] ?? groupType;
+  }
+
+  /// Emoji đại diện quan hệ — khớp đúng bộ icon dùng ở picker "Quan hệ"
+  /// (RelativeFormScreen._groupTypes) để avatar và picker luôn đồng nhất.
+  String get groupTypeEmoji {
+    const map = {
+      'GIA_DINH': '👨‍👩‍👧',
+      'CON_CAI': '👶',
+      'BAN_BE': '👤',
+      'BAN_THAN': '🧑',
+      'ONG': '👴',
+      'BA': '👵',
+      'BO': '👨',
+      'ME': '👩',
+      'VO_CHONG': '💍',
+      'ANH_CHI_EM': '🧒',
+      'CON': '👶',
+      'NGUOI_YEU': '💕',
+      'NGUOI_THAN': '👤',
+    };
+    return map[groupType] ?? '👤';
   }
 
   String get genderDisplay {

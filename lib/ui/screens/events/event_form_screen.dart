@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../providers/event_provider.dart';
 import '../../../providers/relative_provider.dart';
+import '../../../providers/home_provider.dart';
 import '../../../models/event.dart';
 import '../../widgets/nino/bottom_option_sheet.dart';
 import '../../widgets/nino/soft_toggle.dart';
@@ -346,7 +347,13 @@ class _EventFormScreenState extends State<EventFormScreen> {
       // đâu (chọn loại sự kiện, chi tiết người thân, Lịch nghỉ lễ, hay sửa
       // từ màn chi tiết sự kiện), không dừng lại ở màn trung gian đã push
       // qua như context.pop() từng làm.
-      if (success && mounted) context.go('/events');
+      if (success && mounted) {
+        // HomeProvider có snapshot sự kiện riêng (Sự kiện sắp tới / Sự kiện
+        // của tôi), không tự đồng bộ với EventProvider — refresh ở đây để
+        // Home không hiện dữ liệu cũ khi quay lại.
+        context.read<HomeProvider>().refresh();
+        context.go('/events');
+      }
     });
   }
 

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-/// Circle avatar: shows [avatarUrl] when present, otherwise the first
-/// letter of [name] on a soft-tinted [softColor] background in [color].
+/// Circle avatar: shows [avatarUrl] when present, otherwise [emoji] (nếu
+/// có — VD icon quan hệ ở màn Người thân) hoặc chữ cái đầu của [name] trên
+/// nền [softColor].
 class InitialsAvatar extends StatelessWidget {
   final String name;
   final Color color;
   final Color softColor;
   final double radius;
   final String? avatarUrl;
+  final String? emoji;
 
   const InitialsAvatar({
     super.key,
@@ -17,6 +19,7 @@ class InitialsAvatar extends StatelessWidget {
     required this.softColor,
     this.radius = 24,
     this.avatarUrl,
+    this.emoji,
   });
 
   @override
@@ -33,10 +36,12 @@ class InitialsAvatar extends StatelessWidget {
     return CircleAvatar(
       radius: radius,
       backgroundColor: softColor,
-      child: Text(
-        initial,
-        style: TextStyle(fontSize: radius * 0.62, fontWeight: FontWeight.w700, color: color),
-      ),
+      child: (emoji != null && emoji!.isNotEmpty)
+          ? Text(emoji!, style: TextStyle(fontSize: radius * 0.78))
+          : Text(
+              initial,
+              style: TextStyle(fontSize: radius * 0.62, fontWeight: FontWeight.w700, color: color),
+            ),
     );
   }
 }

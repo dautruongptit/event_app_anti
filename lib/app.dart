@@ -29,7 +29,7 @@ class _AppWidgetState extends State<AppWidget> {
     final localeProvider = context.watch<LocaleProvider>();
 
     return MaterialApp.router(
-      title: 'Nhắc Sự Kiện',
+      title: 'Nino',
       theme: themeProvider.themeData,
       routerConfig: _router,
       locale: localeProvider.locale,

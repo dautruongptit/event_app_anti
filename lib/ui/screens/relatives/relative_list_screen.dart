@@ -18,13 +18,6 @@ class RelativeListScreen extends StatefulWidget {
 }
 
 class _RelativeListScreenState extends State<RelativeListScreen> {
-  static const _groupLabels = {
-    'GIA_DINH': 'Gia đình',
-    'VO_CHONG': 'Vợ/Chồng',
-    'CON_CAI': 'Con cái',
-    'BAN_BE': 'Bạn bè',
-  };
-
   @override
   void initState() {
     super.initState();
@@ -59,8 +52,15 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
     final pri = isDark ? AppColors.primaryDark : AppColors.primaryLight;
 
     final total = provider.groupSummary.fold<int>(0, (sum, s) => sum + s.count);
-    final filterLabels = ['Tất cả', ..._groupLabels.values];
-    final selectedLabel = provider.filterGroupType == null ? 'Tất cả' : (_groupLabels[provider.filterGroupType] ?? 'Tất cả');
+    // Chip lọc dựng từ các quan hệ THẬT SỰ đang tồn tại ở người thân của
+    // user (groupSummary lấy từ backend) — trước đây dùng 1 danh sách cứng
+    // (GIA_DINH/VO_CHONG/CON_CAI/BAN_BE) đã lỗi thời, không khớp các quan hệ
+    // hiện dùng ở form Thêm/Sửa (Ông/Bà/Bố/Mẹ/...) nên lọc sai/vô nghĩa.
+    final filterLabels = ['Tất cả', ...provider.groupSummary.map((s) => s.displayName)];
+    final selectedSummary = provider.groupSummary.where((s) => s.groupType == provider.filterGroupType);
+    final selectedLabel = provider.filterGroupType == null
+        ? 'Tất cả'
+        : (selectedSummary.isEmpty ? 'Tất cả' : selectedSummary.first.displayName);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
@@ -99,7 +99,9 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
                 labels: filterLabels,
                 selected: selectedLabel,
                 onChanged: (label) {
-                  final key = label == 'Tất cả' ? null : _groupLabels.entries.firstWhere((e) => e.value == label).key;
+                  final key = label == 'Tất cả'
+                      ? null
+                      : provider.groupSummary.firstWhere((s) => s.displayName == label).groupType;
                   context.read<RelativeProvider>().setGroupFilter(key);
                 },
               ),
@@ -125,7 +127,7 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
                               padding: const EdgeInsets.only(bottom: 9),
                               child: CardRow(
                                 onTap: () => context.push('/relatives/${rel.id}'),
-                                leading: InitialsAvatar(name: rel.displayName, color: color, softColor: softColor, radius: 23, avatarUrl: rel.avatarUrl),
+                                leading: InitialsAvatar(name: rel.displayName, color: color, softColor: softColor, radius: 23, avatarUrl: rel.avatarUrl, emoji: rel.groupTypeEmoji),
                                 title: rel.displayName,
                                 meta: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,

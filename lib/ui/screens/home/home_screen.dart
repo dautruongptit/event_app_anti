@@ -310,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.only(bottom: 9),
                 child: CardRow(
                   onTap: () => context.push('/relatives/${rel.id}'),
-                  leading: InitialsAvatar(name: rel.displayName, color: color, softColor: softColor, radius: 21, avatarUrl: rel.avatarUrl),
+                  leading: InitialsAvatar(name: rel.displayName, color: color, softColor: softColor, radius: 21, avatarUrl: rel.avatarUrl, emoji: rel.groupTypeEmoji),
                   title: rel.displayName,
                   meta: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

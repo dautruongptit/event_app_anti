@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../providers/home_provider.dart';
 
 class BottomNavScaffold extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -38,7 +40,21 @@ class BottomNavScaffold extends StatelessWidget {
                 final active = navigationShell.currentIndex == i;
                 final (icon, label) = _items[i];
                 return GestureDetector(
-                  onTap: () => navigationShell.goBranch(i, initialLocation: i == navigationShell.currentIndex),
+                  onTap: () {
+                    // StatefulShellRoute.indexedStack giữ nguyên state mỗi
+                    // branch khi chuyển tab (không rebuild/initState lại) —
+                    // nên sửa người thân/sự kiện ở tab khác xong quay về
+                    // Home sẽ không tự refresh. Chủ động tải lại Home mỗi
+                    // khi chuyển VÀO tab Home để luôn khớp dữ liệu mới nhất.
+                    if (i == 0) context.read<HomeProvider>().refresh();
+                    // initialLocation: true LUÔN LUÔN — trước đây chỉ true
+                    // khi bấm đúng tab đang active, nên nếu push 1 màn con
+                    // (VD: Home -> chi tiết người thân -> Sửa), rồi chuyển
+                    // sang tab khác và quay lại, branch vẫn còn nguyên màn
+                    // con cũ trên stack thay vì về màn gốc của tab. Bấm tab
+                    // nào phải luôn hiện đúng màn gốc của tab đó.
+                    navigationShell.goBranch(i, initialLocation: true);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     child: Column(
