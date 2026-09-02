@@ -34,4 +34,12 @@ class GoogleAuthHelper {
       throw Exception('Đăng nhập Google thất bại: ${e.message ?? e.code}');
     }
   }
+
+  /// Xoá phiên Google Sign-In đã cache trên máy — gọi khi người dùng đăng
+  /// xuất khỏi app. Không gọi hàm này thì lần đăng nhập Google kế tiếp sẽ
+  /// tự động dùng lại tài khoản cũ (signIn() trả về ngay, không hiện hộp
+  /// thoại chọn tài khoản), khiến người dùng không thể đổi sang Gmail khác.
+  Future<void> signOut() async {
+    await _signIn.signOut();
+  }
 }

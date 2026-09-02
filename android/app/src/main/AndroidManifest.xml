@@ -27,6 +27,12 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Icon riêng cho notification hiện ở status bar khi app ở nền —
+             không dùng chung ic_launcher (icon màu đầy đủ) vì Android tự phủ
+             trắng icon nhỏ theo alpha, icon màu nền đặc sẽ thành 1 khối trắng. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_nino" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

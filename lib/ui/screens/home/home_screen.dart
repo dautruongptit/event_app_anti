@@ -13,6 +13,9 @@ import '../../widgets/nino/initials_avatar.dart';
 import '../../widgets/nino/card_row.dart';
 import '../../widgets/nino/pill_tabs.dart';
 import '../../widgets/nino/shake_on_change.dart';
+import '../../widgets/nino/nino_toast.dart';
+import '../../widgets/nino/connection_error_dialog.dart';
+import '../../../core/network/api_exceptions.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,14 +37,33 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HomeProvider>().refresh();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _refreshAndNotifyOnError();
+      if (!mounted) return;
       // Trước đây chỉ được gọi khi mở màn Thông báo — badge số chưa đọc ở
       // chuông trên Home luôn hiện sai/0 cho tới khi người dùng tự bấm vào
       // chuông ít nhất 1 lần trong phiên. Tải ngay khi vào Home để badge
       // đúng ngay từ đầu.
       context.read<NotificationProvider>().loadUnreadCount();
     });
+  }
+
+  /// Tải dữ liệu Home, và nếu lỗi (backend sập, mất mạng...) báo ngay cho
+  /// người dùng — trước đây lỗi bị nuốt im lặng, Home chỉ hiện rỗng trông
+  /// như "chưa có dữ liệu" dù thực chất là không gọi được API. Lỗi mất
+  /// mạng/timeout dùng popup (có nút "Thử lại") vì nghiêm trọng, dễ bị bỏ
+  /// lỡ hơn nếu chỉ là toast tự biến mất; lỗi khác vẫn dùng toast.
+  Future<void> _refreshAndNotifyOnError() async {
+    final homeProvider = context.read<HomeProvider>();
+    await homeProvider.refresh();
+    if (!mounted) return;
+    final error = homeProvider.error;
+    if (error == null) return;
+    if (isNetworkErrorMessage(error)) {
+      showConnectionErrorDialog(context, onRetry: _refreshAndNotifyOnError);
+    } else {
+      showNinoToast(context, error);
+    }
   }
 
   @override
@@ -69,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => context.read<HomeProvider>().refresh(),
+          onRefresh: _refreshAndNotifyOnError,
           child: homeProvider.isLoading && homeData == null
               ? const Center(child: CircularProgressIndicator())
               : CustomScrollView(
@@ -85,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           labels: const ['Người thân', 'Sự kiện của tôi'],
                           selectedIndex: _selectedTab,
                           onChanged: (i) => setState(() => _selectedTab = i),
+                          showIndicator: false,
                         ),
                       ),
                     ),

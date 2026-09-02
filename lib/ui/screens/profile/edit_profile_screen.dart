@@ -40,6 +40,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _isInit = false;
   bool _touched = false;
 
+  /// Bề rộng cột nhãn khi nhãn và ô input/select được đặt ngang hàng (xem
+  /// [_formRow]) — khớp layout của [RelativeFormScreen] để hai form
+  /// "sửa người thân" / "sửa hồ sơ" nhất quán với nhau.
+  static const double _formLabelWidth = 88;
+  static const double _formFieldOffset = _formLabelWidth + 12;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -217,75 +223,80 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 22),
-                        Text('Họ và tên *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
-                        const SizedBox(height: 7),
-                        TextFormField(
-                          controller: _nameController,
-                          onChanged: (_) => setState(() {}),
-                          decoration: InputDecoration(
-                            hintText: 'Nguyễn Minh',
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: pri, width: 1.5)),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: nameError ? danger : line2)),
+                        _formRow(
+                          label: Text('Họ tên *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                          field: TextFormField(
+                            controller: _nameController,
+                            onChanged: (_) => setState(() {}),
+                            decoration: InputDecoration(
+                              hintText: 'Nguyễn Minh',
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: pri, width: 1.5)),
+                              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide(color: nameError ? danger : line2)),
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ và tên' : null,
                           ),
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ và tên' : null,
                         ),
                         if (nameError)
                           Padding(
-                            padding: const EdgeInsets.only(top: 7),
+                            padding: const EdgeInsets.only(left: _formFieldOffset, top: 7),
                             child: Text('⚠ Vui lòng nhập họ và tên', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: danger)),
                           ),
                         const SizedBox(height: 18),
-                        Text('Email', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
-                        const SizedBox(height: 7),
-                        GestureDetector(
-                          onTap: () => showNinoToast(context, 'Email đăng nhập không sửa được'),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
-                            decoration: BoxDecoration(color: neutSoft, borderRadius: BorderRadius.circular(15), border: Border.all(color: line)),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    user?.email ?? '',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: txt),
+                        _formRow(
+                          label: Text('Email', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                          field: GestureDetector(
+                            onTap: () => showNinoToast(context, 'Email đăng nhập không sửa được'),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+                              decoration: BoxDecoration(color: neutSoft, borderRadius: BorderRadius.circular(15), border: Border.all(color: line)),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      user?.email ?? '',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: txt),
+                                    ),
                                   ),
-                                ),
-                                Icon(Icons.lock_outline_rounded, size: 15, color: fnt),
-                              ],
+                                  Icon(Icons.lock_outline_rounded, size: 15, color: fnt),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 18),
-                        Text('Số điện thoại', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
-                        const SizedBox(height: 7),
-                        TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(hintText: '0912 345 678'),
+                        _formRow(
+                          label: Text('Điện thoại', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                          field: TextFormField(
+                            controller: _phoneController,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(hintText: '0912 345 678'),
+                          ),
                         ),
                         const SizedBox(height: 18),
-                        Text('Giới tính', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            _genderRadio('MALE', 'Nam', txt, pri),
-                            _genderRadio('FEMALE', 'Nữ', txt, pri),
-                            _genderRadio('OTHER', 'Khác', txt, pri),
-                          ],
+                        _formRow(
+                          label: Text('Giới tính', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                          field: Row(
+                            children: [
+                              _genderRadio('MALE', 'Nam', txt, pri),
+                              _genderRadio('FEMALE', 'Nữ', txt, pri),
+                              _genderRadio('OTHER', 'Khác', txt, pri),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 18),
-                        Text('Ngày sinh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
-                        const SizedBox(height: 7),
-                        Row(
-                          children: [
-                            Expanded(child: _dobPart('Ngày', _dobDay, () => _pickDatePart('day'), txt, mut, card, line2)),
-                            const SizedBox(width: 8),
-                            Expanded(child: _dobPart('Tháng', _dobMonth, () => _pickDatePart('month'), txt, mut, card, line2)),
-                            const SizedBox(width: 8),
-                            Expanded(child: _dobPart('Năm', _dobYear, () => _pickDatePart('year'), txt, mut, card, line2)),
-                          ],
+                        _formRow(
+                          label: Text('Ngày sinh', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: mut)),
+                          field: Row(
+                            children: [
+                              Expanded(child: _dobPart('Ngày', _dobDay, () => _pickDatePart('day'), txt, mut, card, line2)),
+                              const SizedBox(width: 8),
+                              Expanded(child: _dobPart('Tháng', _dobMonth, () => _pickDatePart('month'), txt, mut, card, line2)),
+                              const SizedBox(width: 8),
+                              Expanded(child: _dobPart('Năm', _dobYear, () => _pickDatePart('year'), txt, mut, card, line2)),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 32),
                         SizedBox(
@@ -310,6 +321,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Đặt [label] và [field] ngang hàng nhau (nhãn cột trái cố định bề rộng,
+  /// field chiếm phần còn lại) — khớp [RelativeFormScreen] để hai form
+  /// "sửa người thân" / "sửa hồ sơ" nhất quán với nhau.
+  Widget _formRow({required Widget label, required Widget field}) {
+    return Row(
+      children: [
+        SizedBox(width: _formLabelWidth, child: label),
+        const SizedBox(width: 12),
+        Expanded(child: field),
+      ],
     );
   }
 

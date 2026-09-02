@@ -35,55 +35,71 @@ Future<Widget> _buildApp() async {
   );
 }
 
-/// Opens the bottom sheet for [tileLabel] ("Ngày"/"Tháng"/"Năm") and taps the
-/// option labeled [optionLabel], scrolling the sheet's (lazily-built) list
-/// until that option is actually on screen first.
-Future<void> _pick(WidgetTester tester, String tileLabel, String optionLabel) async {
-  await tester.tap(find.text(tileLabel));
-  await tester.pumpAndSettle();
+/// Taps [optionLabel] in the currently-open bottom option sheet, scrolling
+/// its (lazily-built) list until the option is on screen first.
+Future<void> _pickInOpenSheet(WidgetTester tester, String optionLabel) async {
   final option = find.text(optionLabel);
-  await tester.scrollUntilVisible(option, 150, scrollable: find.byType(Scrollable).last);
+  await tester.scrollUntilVisible(option, 150,
+      scrollable: find.byType(Scrollable).last);
   await tester.pumpAndSettle();
   await tester.tap(option);
   await tester.pumpAndSettle();
 }
 
-void main() {
-  testWidgets('picking day 29 then month 2 (no year yet) keeps day at 29, not clamped to 28', (tester) async {
-    await tester.pumpWidget(await _buildApp());
+/// Drives the single "Ngày sinh" row through its sequential dd → mm → yyyy
+/// sheet flow (tap the row once, each pick auto-advances to the next sheet
+/// — matches the design's `pickDob`/`sheet:'dob'` chain). Pass `year: null`
+/// to stop after month and dismiss the auto-opened year sheet via "Đóng",
+/// leaving the date incomplete on purpose.
+Future<void> _pickDobSequence(WidgetTester tester,
+    {required int day, required int month, int? year}) async {
+  await tester.tap(find.byKey(const Key('dobRow')));
+  await tester.pumpAndSettle();
+  await _pickInOpenSheet(tester, '$day');
+  await _pickInOpenSheet(tester, '$month');
+  if (year != null) {
+    await _pickInOpenSheet(tester, '$year');
+  } else {
+    await tester.tap(find.text('Đóng'));
     await tester.pumpAndSettle();
+  }
+}
 
-    await _pick(tester, 'Ngày', '29');
-    await _pick(tester, 'Tháng', '2');
-
-    // No year has been picked yet, so there is no real evidence this
-    // February is non-leap — the day must still read 29.
-    expect(find.text('29'), findsOneWidget);
-    expect(find.text('28'), findsNothing);
-  });
-
-  testWidgets('day 29 + month 2 clamps to 28 once a non-leap year is picked', (tester) async {
+void main() {
+  testWidgets(
+      'day 29 + month 2 clamps to 28 once a non-leap year is picked',
+      (tester) async {
     await tester.pumpWidget(await _buildApp());
     await tester.pumpAndSettle();
     final nonLeapYear = _nearestNonLeapYearAtOrBefore(DateTime.now().year);
 
-    await _pick(tester, 'Ngày', '29');
-    await _pick(tester, 'Tháng', '2');
-    await _pick(tester, 'Năm', '$nonLeapYear');
+    await _pickDobSequence(tester, day: 29, month: 2, year: nonLeapYear);
 
-    expect(find.text('28'), findsOneWidget);
-    expect(find.text('29'), findsNothing);
+    expect(find.text('28/02/$nonLeapYear'), findsOneWidget);
   });
 
-  testWidgets('day 29 + month 2 stays 29 when a leap year is picked', (tester) async {
+  testWidgets('day 29 + month 2 stays 29 when a leap year is picked',
+      (tester) async {
     await tester.pumpWidget(await _buildApp());
     await tester.pumpAndSettle();
     final leapYear = _nearestLeapYearAtOrBefore(DateTime.now().year);
 
-    await _pick(tester, 'Ngày', '29');
-    await _pick(tester, 'Tháng', '2');
-    await _pick(tester, 'Năm', '$leapYear');
+    await _pickDobSequence(tester, day: 29, month: 2, year: leapYear);
 
-    expect(find.text('29'), findsOneWidget);
+    expect(find.text('29/02/$leapYear'), findsOneWidget);
+  });
+
+  testWidgets(
+      'picking day 29 then month 2 without a year yet does not crash and leaves the date incomplete',
+      (tester) async {
+    await tester.pumpWidget(await _buildApp());
+    await tester.pumpAndSettle();
+
+    // No year chosen yet — nothing to base a leap-year clamp on, so the row
+    // must still show the "not chosen" placeholder rather than crash or
+    // silently commit a guessed date.
+    await _pickDobSequence(tester, day: 29, month: 2);
+
+    expect(find.text('Chọn ngày sinh'), findsOneWidget);
   });
 }

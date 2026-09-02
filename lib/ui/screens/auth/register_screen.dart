@@ -6,7 +6,9 @@ import '../../../core/theme/theme_provider.dart';
 import '../../../providers/auth_provider.dart';
 import '../../widgets/nino/nino_logo.dart';
 import '../../widgets/nino/nino_toast.dart';
+import '../../widgets/nino/connection_error_dialog.dart';
 import '../../widgets/google_logo.dart';
+import '../../../core/network/api_exceptions.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -41,7 +43,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (success) {
         context.go('/home');
       } else if (authProvider.error != null) {
-        showNinoToast(context, authProvider.error ?? 'Đăng ký bằng Google thất bại');
+        final error = authProvider.error!;
+        if (isNetworkErrorMessage(error)) {
+          showConnectionErrorDialog(context, onRetry: _registerWithGoogle);
+        } else {
+          showNinoToast(context, error);
+        }
       }
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);

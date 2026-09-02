@@ -117,7 +117,15 @@ class DioClient {
       default:
         exception = ServerException(message: 'Unknown error occurred');
     }
-    return DioException(requestOptions: e.requestOptions, error: exception);
+    // Giữ lại type gốc + gán message từ exception vừa map — nếu không,
+    // DioException mới sẽ có type mặc định "unknown" và message null,
+    // khiến e.toString() vô nghĩa (VD: "DioException [unknown]: null").
+    return DioException(
+      requestOptions: e.requestOptions,
+      error: exception,
+      type: e.type,
+      message: exception.message,
+    );
   }
 
   Future<Response> get(String url, {Map<String, dynamic>? queryParameters}) async {

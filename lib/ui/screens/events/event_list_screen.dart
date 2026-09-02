@@ -10,6 +10,8 @@ import '../../widgets/nino/card_row.dart';
 import '../../widgets/nino/pill_tabs.dart';
 import '../../widgets/nino/sticky_action_bars.dart';
 import '../../widgets/nino/nino_toast.dart';
+import '../../widgets/nino/connection_error_dialog.dart';
+import '../../../core/network/api_exceptions.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({super.key});
@@ -24,9 +26,24 @@ class _EventListScreenState extends State<EventListScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<EventProvider>().loadEvents();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadAndNotifyOnError();
     });
+  }
+
+  /// Backend sập/mất mạng: báo ngay thay vì im lặng hiện danh sách rỗng.
+  /// Lỗi mất mạng/timeout dùng popup (có nút "Thử lại"), lỗi khác dùng toast.
+  Future<void> _loadAndNotifyOnError() async {
+    final provider = context.read<EventProvider>();
+    await provider.loadEvents();
+    if (!mounted) return;
+    final error = provider.error;
+    if (error == null) return;
+    if (isNetworkErrorMessage(error)) {
+      showConnectionErrorDialog(context, onRetry: _loadAndNotifyOnError);
+    } else {
+      showNinoToast(context, error);
+    }
   }
 
   void _onMonthSelected(int? month) {

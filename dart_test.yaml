@@ -1,0 +1,8 @@
+# `flutter test` (no args) đã được xác nhận trên máy dev này: chạy song song
+# (concurrency mặc định = số lõi CPU) khiến 3/12 file test bị BỎ QUA hoàn
+# toàn một cách im lặng — vẫn thoát code 0 và in "All tests passed!" dù
+# thiếu file. `flutter test -j 1` (tuần tự) thì chạy đủ 12 file, 37 test.
+#
+# Ép concurrency=1 ở đây để `flutter test` mặc định luôn đáng tin cậy,
+# không cần nhớ gõ `-j 1` mỗi lần — đánh đổi là chạy chậm hơn một chút.
+concurrency: 1

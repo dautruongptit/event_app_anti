@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:event_app/core/network/api_exceptions.dart';
 import 'package:event_app/services/relative_service.dart';
 import 'package:event_app/models/relative.dart';
 import 'package:event_app/models/group_summary.dart';
@@ -33,7 +34,7 @@ class RelativeProvider extends ChangeNotifier {
       );
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -52,7 +53,7 @@ class RelativeProvider extends ChangeNotifier {
       _selectedRelative = await _relativeService.getDetail(id);
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -65,7 +66,7 @@ class RelativeProvider extends ChangeNotifier {
       await loadGroupSummary();
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -82,7 +83,7 @@ class RelativeProvider extends ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -96,7 +97,7 @@ class RelativeProvider extends ChangeNotifier {
       await loadGroupSummary();
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
       return false;
     }
   }

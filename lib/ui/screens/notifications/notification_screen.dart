@@ -4,6 +4,9 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../providers/notification_provider.dart';
 import '../../widgets/nino/card_row.dart';
+import '../../widgets/nino/nino_toast.dart';
+import '../../widgets/nino/connection_error_dialog.dart';
+import '../../../core/network/api_exceptions.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
@@ -19,10 +22,27 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NotificationProvider>().loadNotifications(refresh: true);
+      _loadAndNotifyOnError();
       context.read<NotificationProvider>().loadUnreadCount();
     });
     _scrollController.addListener(_onScroll);
+  }
+
+  /// Tải danh sách thông báo, và nếu lỗi (backend sập, mất mạng...) báo
+  /// ngay cho người dùng — trước đây lỗi bị nuốt im lặng, màn chỉ hiện rỗng
+  /// trông như "chưa có thông báo" dù thực chất không gọi được API. Lỗi
+  /// mất mạng/timeout dùng popup (có nút "Thử lại"), lỗi khác dùng toast.
+  Future<void> _loadAndNotifyOnError() async {
+    final provider = context.read<NotificationProvider>();
+    await provider.loadNotifications(refresh: true);
+    if (!mounted) return;
+    final error = provider.error;
+    if (error == null) return;
+    if (isNetworkErrorMessage(error)) {
+      showConnectionErrorDialog(context, onRetry: _loadAndNotifyOnError);
+    } else {
+      showNinoToast(context, error);
+    }
   }
 
   void _onScroll() {
@@ -61,7 +81,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          await provider.loadNotifications(refresh: true);
+          await _loadAndNotifyOnError();
           await provider.loadUnreadCount();
         },
         child: _buildBody(provider, txt, mut, fnt, pri, priSoft, neutralSoft),

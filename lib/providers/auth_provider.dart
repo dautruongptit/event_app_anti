@@ -6,6 +6,7 @@ import 'package:event_app/services/user_service.dart';
 import 'package:event_app/services/google_auth_helper.dart';
 import 'package:event_app/services/fcm_service.dart';
 import 'package:event_app/core/network/dio_client.dart';
+import 'package:event_app/core/network/api_exceptions.dart';
 import 'package:event_app/models/login_history.dart';
 import 'package:event_app/models/user.dart';
 
@@ -68,7 +69,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _setError(_extractErrorMessage(e));
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -100,7 +101,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _setError(_extractErrorMessage(e));
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -123,7 +124,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _setError(_extractErrorMessage(e));
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -132,6 +133,12 @@ class AuthProvider extends ChangeNotifier {
     await _fcmService?.unregisterCurrentDevice();
     try {
       await _authService.logout();
+    } catch (_) {}
+    // Xoá phiên Google Sign-In đã cache — nếu không, lần đăng nhập Google kế
+    // tiếp sẽ tự động dùng lại tài khoản cũ thay vì hiện hộp thoại chọn tài
+    // khoản, khiến người dùng không thể đổi sang Gmail khác.
+    try {
+      await _googleAuthHelper.signOut();
     } catch (_) {}
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('accessToken');
@@ -148,7 +155,7 @@ class AuthProvider extends ChangeNotifier {
       _user = await _userService.getProfile();
       _setLoading(false);
     } catch (e) {
-      _setError(_extractErrorMessage(e));
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -171,7 +178,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _setError(_extractErrorMessage(e));
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -186,7 +193,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _setError(_extractErrorMessage(e));
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -198,7 +205,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _setError(_extractErrorMessage(e));
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -230,12 +237,5 @@ class AuthProvider extends ChangeNotifier {
     _error = error;
     _isLoading = false;
     notifyListeners();
-  }
-
-  String _extractErrorMessage(dynamic e) {
-    if (e is Exception) {
-      return e.toString().replaceFirst('Exception: ', '');
-    }
-    return e.toString();
   }
 }

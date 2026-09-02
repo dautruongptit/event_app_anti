@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:event_app/core/network/api_exceptions.dart';
 import 'package:event_app/services/notification_service.dart';
 import 'package:event_app/models/notification_model.dart';
 
@@ -54,7 +55,7 @@ class NotificationProvider extends ChangeNotifier {
 
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -96,7 +97,7 @@ class NotificationProvider extends ChangeNotifier {
 
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 

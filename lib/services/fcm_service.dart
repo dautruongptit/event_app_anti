@@ -79,7 +79,11 @@ class FcmService {
   }
 
   Future<void> _initLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // '@drawable/ic_stat_nino' — silhouette trắng riêng cho status bar, KHÔNG
+    // dùng chung với '@mipmap/ic_launcher' (icon màu đầy đủ): Android tự phủ
+    // trắng mọi pixel có alpha ở icon nhỏ, nếu dùng icon launcher (nền đặc
+    // màu) thì cả icon lẫn logo sẽ biến thành 1 khối trắng, không đọc được.
+    const androidSettings = AndroidInitializationSettings('@drawable/ic_stat_nino');
     const iosSettings = DarwinInitializationSettings();
     await _localNotifications.initialize(
       const InitializationSettings(android: androidSettings, iOS: iosSettings),

@@ -6,8 +6,18 @@ class PillTabs extends StatelessWidget {
   final List<String> labels;
   final int selectedIndex;
   final ValueChanged<int> onChanged;
+  /// Gạch chân dưới label đang chọn — tắt cho Home (chỉ đổi màu/độ đậm chữ
+  /// để phân biệt tab, không cần gạch chân), vẫn bật mặc định cho chỗ khác
+  /// (VD: Lịch nghỉ lễ) để không đổi giao diện ngoài ý muốn.
+  final bool showIndicator;
 
-  const PillTabs({super.key, required this.labels, required this.selectedIndex, required this.onChanged});
+  const PillTabs({
+    super.key,
+    required this.labels,
+    required this.selectedIndex,
+    required this.onChanged,
+    this.showIndicator = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,15 +42,17 @@ class PillTabs extends StatelessWidget {
                     color: selected ? pri : mut,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 2.5,
-                  width: 28,
-                  decoration: BoxDecoration(
-                    color: selected ? pri : Colors.transparent,
-                    borderRadius: BorderRadius.circular(2),
+                if (showIndicator) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 2.5,
+                    width: 28,
+                    decoration: BoxDecoration(
+                      color: selected ? pri : Colors.transparent,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

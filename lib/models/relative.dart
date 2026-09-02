@@ -8,9 +8,8 @@ class RelativeModel {
   final String? gender;
   final DateTime? dateOfBirth;
   final String? location;
-  final double? heightCm;
-  final double? weightKg;
   final List<String>? hobbies;
+  final String? notes;
   final String? avatarUrl;
   final int? totalEvents;
   final int? daysUntilBirthday;
@@ -24,9 +23,8 @@ class RelativeModel {
     this.gender,
     this.dateOfBirth,
     this.location,
-    this.heightCm,
-    this.weightKg,
     this.hobbies,
+    this.notes,
     this.avatarUrl,
     this.totalEvents,
     this.daysUntilBirthday,
@@ -44,11 +42,10 @@ class RelativeModel {
           ? DateTime.tryParse(json['dateOfBirth'])
           : null,
       location: json['location'] as String?,
-      heightCm: (json['heightCm'] as num?)?.toDouble(),
-      weightKg: (json['weightKg'] as num?)?.toDouble(),
       hobbies: json['hobbies'] != null
           ? List<String>.from(json['hobbies'])
           : null,
+      notes: json['notes'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
       totalEvents: json['totalEvents'] as int?,
       // Backend (RelativeResponse.java) trả field tên "daysToBirthday",
@@ -68,9 +65,8 @@ class RelativeModel {
       'gender': gender,
       'dateOfBirth': dateOfBirth?.toIso8601String().split('T').first,
       'location': location,
-      'heightCm': heightCm,
-      'weightKg': weightKg,
       'hobbies': hobbies,
+      'notes': notes,
       'avatarUrl': avatarUrl,
     };
   }
@@ -79,10 +75,21 @@ class RelativeModel {
 
   String get groupTypeDisplay {
     const map = {
+      // Nhóm cũ — chỉ còn để hiển thị đúng cho người thân có sẵn.
       'GIA_DINH': 'Gia đình',
-      'VO_CHONG': 'Vợ/Chồng',
       'CON_CAI': 'Con cái',
       'BAN_BE': 'Bạn bè',
+      // Danh sách quan hệ hiện dùng (khớp picker "Quan hệ với bạn").
+      'BAN_THAN': 'Bản thân',
+      'ONG': 'Ông',
+      'BA': 'Bà',
+      'BO': 'Bố',
+      'ME': 'Mẹ',
+      'VO_CHONG': 'Vợ (Chồng)',
+      'ANH_CHI_EM': 'Anh/Chị/Em',
+      'CON': 'Con Trai/Con Gái',
+      'NGUOI_YEU': 'Người yêu',
+      'NGUOI_THAN': 'Người Thân',
     };
     return map[groupType] ?? groupType;
   }
@@ -113,9 +120,8 @@ class RelativeDetailModel {
   final int? age;
   final DateTime? dateOfBirth;
   final String? location;
-  final double? heightCm;
-  final double? weightKg;
   final List<String>? hobbies;
+  final String? notes;
   final String? avatarUrl;
   final int? daysUntilBirthday;
   final List<EventModel> relatedEvents;
@@ -129,9 +135,8 @@ class RelativeDetailModel {
     this.age,
     this.dateOfBirth,
     this.location,
-    this.heightCm,
-    this.weightKg,
     this.hobbies,
+    this.notes,
     this.avatarUrl,
     this.daysUntilBirthday,
     this.relatedEvents = const [],
@@ -149,11 +154,10 @@ class RelativeDetailModel {
           ? DateTime.tryParse(json['dateOfBirth'])
           : null,
       location: json['location'] as String?,
-      heightCm: (json['heightCm'] as num?)?.toDouble(),
-      weightKg: (json['weightKg'] as num?)?.toDouble(),
       hobbies: json['hobbies'] != null
           ? List<String>.from(json['hobbies'])
           : null,
+      notes: json['notes'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
       // Backend (RelativeDetailResponse.java) trả field tên "daysToBirthday",
       // không phải "daysUntilBirthday".
@@ -184,10 +188,21 @@ class RelativeDetailModel {
 
   String get groupTypeDisplay {
     const map = {
+      // Nhóm cũ — chỉ còn để hiển thị đúng cho người thân có sẵn.
       'GIA_DINH': 'Gia đình',
-      'VO_CHONG': 'Vợ/Chồng',
       'CON_CAI': 'Con cái',
       'BAN_BE': 'Bạn bè',
+      // Danh sách quan hệ hiện dùng (khớp picker "Quan hệ với bạn").
+      'BAN_THAN': 'Bản thân',
+      'ONG': 'Ông',
+      'BA': 'Bà',
+      'BO': 'Bố',
+      'ME': 'Mẹ',
+      'VO_CHONG': 'Vợ (Chồng)',
+      'ANH_CHI_EM': 'Anh/Chị/Em',
+      'CON': 'Con Trai/Con Gái',
+      'NGUOI_YEU': 'Người yêu',
+      'NGUOI_THAN': 'Người Thân',
     };
     return map[groupType] ?? groupType;
   }

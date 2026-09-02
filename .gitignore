@@ -89,3 +89,6 @@ app.*.map.json
 # Environment
 .env
 .env.*
+
+# Local tool state (superpowers skill runtime)
+.superpowers/

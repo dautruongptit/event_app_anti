@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:event_app/core/network/api_exceptions.dart';
 import 'package:event_app/services/home_service.dart';
 import 'package:event_app/models/home_response.dart';
 import 'package:event_app/models/event.dart';
@@ -24,7 +25,7 @@ class HomeProvider extends ChangeNotifier {
       _homeData = await _homeService.getHomeData();
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -34,7 +35,7 @@ class HomeProvider extends ChangeNotifier {
       _myEvents = await _homeService.getMyEvents();
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -55,7 +56,7 @@ class HomeProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 

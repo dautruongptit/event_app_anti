@@ -6,6 +6,9 @@ import '../../../providers/relative_provider.dart';
 import '../../widgets/nino/initials_avatar.dart';
 import '../../widgets/nino/card_row.dart';
 import '../../widgets/nino/pill_tabs.dart';
+import '../../widgets/nino/nino_toast.dart';
+import '../../widgets/nino/connection_error_dialog.dart';
+import '../../../core/network/api_exceptions.dart';
 
 class RelativeListScreen extends StatefulWidget {
   const RelativeListScreen({super.key});
@@ -25,11 +28,25 @@ class _RelativeListScreenState extends State<RelativeListScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<RelativeProvider>();
-      provider.loadRelatives();
-      provider.loadGroupSummary();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadAndNotifyOnError();
     });
+  }
+
+  /// Backend sập/mất mạng: báo ngay thay vì im lặng hiện danh sách rỗng.
+  /// Lỗi mất mạng/timeout dùng popup (có nút "Thử lại"), lỗi khác dùng toast.
+  Future<void> _loadAndNotifyOnError() async {
+    final provider = context.read<RelativeProvider>();
+    await provider.loadRelatives();
+    provider.loadGroupSummary();
+    if (!mounted) return;
+    final error = provider.error;
+    if (error == null) return;
+    if (isNetworkErrorMessage(error)) {
+      showConnectionErrorDialog(context, onRetry: _loadAndNotifyOnError);
+    } else {
+      showNinoToast(context, error);
+    }
   }
 
   @override

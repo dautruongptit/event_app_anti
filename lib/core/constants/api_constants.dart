@@ -1,5 +1,9 @@
 class ApiConstants {
-  static const String baseUrl = 'https://event.thongtinchinhhieu.site';
+  // TẠM THỜI trỏ về backend chạy local trên máy host để test — 10.0.2.2 là
+  // địa chỉ đặc biệt Android emulator dùng để gọi về localhost của máy host.
+  // Đổi lại 'https://event.thongtinchinhhieu.site' khi test xong.
+  static const String baseUrl = 'http://10.0.2.2:8080';
+  static const String baseUrlProd = 'https://event.thongtinchinhhieu.site';
   static const String baseUrlTailscale = 'http://100.101.239.103:8080';
   static const String apiPrefix = '/api/v1';
 

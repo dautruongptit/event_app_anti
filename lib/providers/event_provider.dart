@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:event_app/core/network/api_exceptions.dart';
 import 'package:event_app/services/event_service.dart';
 import 'package:event_app/models/event.dart';
 
@@ -39,7 +40,7 @@ class EventProvider extends ChangeNotifier {
       );
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -49,7 +50,7 @@ class EventProvider extends ChangeNotifier {
       _upcomingEvents = await _eventService.getUpcoming(limit: limit);
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -59,7 +60,7 @@ class EventProvider extends ChangeNotifier {
       _selectedEvent = await _eventService.getById(id);
       _setLoading(false);
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
     }
   }
 
@@ -71,7 +72,7 @@ class EventProvider extends ChangeNotifier {
       await loadEvents();
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -87,7 +88,7 @@ class EventProvider extends ChangeNotifier {
       }
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
@@ -100,7 +101,7 @@ class EventProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(apiErrorMessage(e));
       return false;
     }
   }
