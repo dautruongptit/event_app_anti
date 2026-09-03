@@ -74,26 +74,7 @@ class RelativeModel {
 
   String get displayName => nickname ?? name;
 
-  String get groupTypeDisplay {
-    const map = {
-      // Nhóm cũ — chỉ còn để hiển thị đúng cho người thân có sẵn.
-      'GIA_DINH': 'Gia đình',
-      'CON_CAI': 'Con cái',
-      'BAN_BE': 'Bạn bè',
-      // Danh sách quan hệ hiện dùng (khớp picker "Quan hệ với bạn").
-      'BAN_THAN': 'Bản thân',
-      'ONG': 'Ông',
-      'BA': 'Bà',
-      'BO': 'Bố',
-      'ME': 'Mẹ',
-      'VO_CHONG': 'Vợ (Chồng)',
-      'ANH_CHI_EM': 'Anh/Chị/Em',
-      'CON': 'Con Trai/Con Gái',
-      'NGUOI_YEU': 'Người yêu',
-      'NGUOI_THAN': 'Người Thân',
-    };
-    return map[groupType] ?? groupType;
-  }
+  String get groupTypeDisplay => labelForGroupType(groupType);
 
   /// Emoji đại diện quan hệ — khớp đúng bộ icon dùng ở picker "Quan hệ"
   /// (RelativeFormScreen._groupTypes) để avatar và picker luôn đồng nhất.
@@ -191,26 +172,7 @@ class RelativeDetailModel {
 
   String get displayName => nickname ?? name;
 
-  String get groupTypeDisplay {
-    const map = {
-      // Nhóm cũ — chỉ còn để hiển thị đúng cho người thân có sẵn.
-      'GIA_DINH': 'Gia đình',
-      'CON_CAI': 'Con cái',
-      'BAN_BE': 'Bạn bè',
-      // Danh sách quan hệ hiện dùng (khớp picker "Quan hệ với bạn").
-      'BAN_THAN': 'Bản thân',
-      'ONG': 'Ông',
-      'BA': 'Bà',
-      'BO': 'Bố',
-      'ME': 'Mẹ',
-      'VO_CHONG': 'Vợ (Chồng)',
-      'ANH_CHI_EM': 'Anh/Chị/Em',
-      'CON': 'Con Trai/Con Gái',
-      'NGUOI_YEU': 'Người yêu',
-      'NGUOI_THAN': 'Người Thân',
-    };
-    return map[groupType] ?? groupType;
-  }
+  String get groupTypeDisplay => labelForGroupType(groupType);
 
   /// Emoji đại diện quan hệ — khớp đúng bộ icon dùng ở picker "Quan hệ"
   /// (RelativeFormScreen._groupTypes) để avatar và picker luôn đồng nhất.

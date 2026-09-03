@@ -141,6 +141,13 @@ class EventModel {
   String? get relativeGroupTypeEmoji =>
       relativeGroupType != null ? emojiForGroupType(relativeGroupType!) : null;
 
+  /// Tên hiển thị của quan hệ (VD "Vợ (Chồng)", "Mẹ") — null nếu là sự
+  /// kiện cho bản thân. Dùng cho chip chủ sở hữu ở màn Sự kiện THAY CHO
+  /// tên riêng của người thân (relativeName) — nhiều sự kiện của cùng 1
+  /// nhóm quan hệ nên hiện thống nhất theo quan hệ, không theo từng tên.
+  String? get relativeGroupTypeDisplay =>
+      relativeGroupType != null ? labelForGroupType(relativeGroupType!) : null;
+
   bool get isPast => eventDate.isBefore(DateTime.now());
 
   String get daysUntilText {

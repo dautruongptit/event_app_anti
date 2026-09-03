@@ -77,12 +77,13 @@ class _EventListScreenState extends State<EventListScreen> {
 
   /// Chip nhỏ ở góc phải tiêu đề mỗi sự kiện, cho biết sự kiện này của ai
   /// — "🔔 Tôi" (relativeId null, sự kiện cho bản thân — khớp thiết kế
-  /// exports/Screenshot 2026-09-02 185127.png) hoặc icon quan hệ + tên
-  /// người thân, nền theo đúng màu của quan hệ đó (khớp màu avatar ở màn
+  /// exports/Screenshot 2026-09-02 185127.png) hoặc icon quan hệ + TÊN
+  /// QUAN HỆ (VD "Vợ (Chồng)", "Mẹ" — không phải tên riêng của người
+  /// thân), nền theo đúng màu của quan hệ đó (khớp màu avatar ở màn
   /// Người thân/Home để nhận diện nhất quán).
   Widget _ownerChip(EventModel event, bool isDark) {
     final isSelf = event.relativeId == null;
-    final label = isSelf ? 'Tôi' : (event.relativeName ?? 'Người thân');
+    final label = isSelf ? 'Tôi' : (event.relativeGroupTypeDisplay ?? 'Người thân');
     final emoji = isSelf ? '🔔' : (event.relativeGroupTypeEmoji ?? '👤');
     final color = isDark
         ? (AppColors.groupTypeColorsDark[event.relativeGroupType] ?? AppColors.primaryDark)
