@@ -1,10 +1,18 @@
 import 'package:event_app/core/constants/api_constants.dart';
 import 'package:event_app/core/network/dio_client.dart';
 import 'package:event_app/models/event.dart';
+import 'package:event_app/models/category.dart';
 
 class EventService {
   final DioClient _dio;
   EventService(this._dio);
+
+  Future<List<CategoryModel>> getCategories() async {
+    final response = await _dio.get(ApiConstants.eventCategories);
+    return (response.data['data'] as List)
+        .map((e) => CategoryModel.fromJson(e))
+        .toList();
+  }
 
   Future<List<EventModel>> getEvents({
     int? categoryId,

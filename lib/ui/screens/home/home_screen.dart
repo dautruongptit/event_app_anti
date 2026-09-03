@@ -306,18 +306,33 @@ class _HomeScreenState extends State<HomeScreen> {
               final softColor = isDark
                   ? (AppColors.groupTypeSoftColorsDark[rel.groupType] ?? AppColors.primarySoftDark)
                   : (AppColors.groupTypeSoftColors[rel.groupType] ?? AppColors.primarySoftLight);
+              // Dòng phụ: đếm ngược sinh nhật kèm emoji 🎂 (khớp thiết kế
+              // exports/Screenshot 2026-09-02 194725.png) — người thân chưa
+              // có ngày sinh thì hiện quan hệ thay thế để dòng không trống.
+              final days = rel.daysUntilBirthday;
+              final String subtitle = days == null
+                  ? rel.groupTypeDisplay
+                  : days == 0
+                      ? '🎂 Sinh nhật hôm nay!'
+                      : days == 1
+                          ? '🎂 Sinh nhật ngày mai'
+                          : '🎂 Sinh nhật còn $days ngày';
               return Padding(
                 padding: const EdgeInsets.only(bottom: 9),
                 child: CardRow(
                   onTap: () => context.push('/relatives/${rel.id}'),
+                  centerContent: true,
                   leading: InitialsAvatar(name: rel.displayName, color: color, softColor: softColor, radius: 21, avatarUrl: rel.avatarUrl, emoji: rel.groupTypeEmoji),
                   title: rel.displayName,
-                  meta: Container(
+                  // Chip quan hệ đứng ngay sát tên (titleSuffix), không đẩy
+                  // ra rìa phải — khớp bố cục "Lan  Chị gái" trong thiết kế.
+                  titleSuffix: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(color: softColor, borderRadius: BorderRadius.circular(6)),
                     child: Text(rel.groupTypeDisplay, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color)),
                   ),
-                  trailing: rel.daysUntilBirthday != null
+                  meta: Text(subtitle, style: TextStyle(fontSize: 12, color: mut), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: days != null
                       ? Container(
                           width: 42,
                           height: 40,
@@ -326,7 +341,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('${rel.daysUntilBirthday}', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color, height: 1)),
+                              Text('$days', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: color, height: 1)),
                               Text('ngày', style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.8))),
                             ],
                           ),

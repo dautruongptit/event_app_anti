@@ -99,32 +99,80 @@ class AppColors {
   );
 
   // ─── Relative avatar palette — cycles by groupType (spec §A) ───
+  // Không có bảng màu "quan hệ" nào ở DB backend (khác Danh mục sự kiện —
+  // event_categories có cột color) — group_type chỉ là 1 cột enum. App chỉ
+  // có 4 tông thương hiệu (coral/mint/violet/amber) nên 13 giá trị enum
+  // hiện tại (xem RelativeFormScreen._groupTypes) buộc phải dùng lại tông,
+  // nhưng dàn đều để nhóm hay xuất hiện CÙNG NHAU trong 1 danh sách người
+  // thân (Ông/Bà/Bố/Mẹ, Vợ chồng/Người yêu, Bạn thân/Bạn bè) không trùng
+  // màu nhau — trước đây ONG và VO_CHONG cùng bị mint do xoay vòng theo
+  // đúng thứ tự khai báo, không theo cụm quan hệ hay gặp chung.
+  // 4 quan hệ khớp đúng ví dụ màu trong thiết kế exports/Screenshot
+  // 2026-09-02 194725.png: Chị/em (ANH_CHI_EM)=coral, Mẹ (ME)=mint,
+  // Bạn thân (BAN_THAN)=violet, Con (CON)=amber — giữ nguyên khi xếp các
+  // giá trị còn lại.
   static const Map<String, Color> groupTypeColors = {
-    'GIA_DINH': primaryLight, // gia đình → coral
-    'VO_CHONG': secondaryLight, // vợ/chồng → mint
-    'CON_CAI': accentLight, // con cái → violet
-    'BAN_BE': Color(0xFFD69C13), // bạn bè → amber
+    'ONG': accentLight, // ông — khác BA/BO/ME để 4 thế hệ ông bà/bố mẹ đều riêng màu
+    'BA': Color(0xFFD69C13), // bà
+    'BO': primaryLight, // bố
+    'ME': secondaryLight, // mẹ — khớp thiết kế
+    'VO_CHONG': secondaryLight, // vợ/chồng
+    'ANH_CHI_EM': primaryLight, // anh chị em — khớp thiết kế
+    'CON': Color(0xFFD69C13), // con — khớp thiết kế
+    'CON_CAI': Color(0xFFD69C13), // con cái (giá trị cũ, cùng nhóm với CON)
+    'NGUOI_YEU': accentLight, // người yêu — khác VO_CHONG để phân biệt
+    'BAN_THAN': accentLight, // bạn thân — khớp thiết kế
+    'BAN_BE': primaryLight, // bạn bè — khác BAN_THAN
+    'GIA_DINH': secondaryLight, // gia đình (giá trị cũ, chung chung)
+    'NGUOI_THAN': Color(0xFFD69C13), // người thân (giá trị cũ, chung chung)
   };
 
   static const Map<String, Color> groupTypeColorsDark = {
-    'GIA_DINH': primaryDark,
+    'ONG': accentDark,
+    'BA': Color(0xFFF0BC48),
+    'BO': primaryDark,
+    'ME': secondaryDark,
     'VO_CHONG': secondaryDark,
-    'CON_CAI': accentDark,
-    'BAN_BE': Color(0xFFF0BC48),
+    'ANH_CHI_EM': primaryDark,
+    'CON': Color(0xFFF0BC48),
+    'CON_CAI': Color(0xFFF0BC48),
+    'NGUOI_YEU': accentDark,
+    'BAN_THAN': accentDark,
+    'BAN_BE': primaryDark,
+    'GIA_DINH': secondaryDark,
+    'NGUOI_THAN': Color(0xFFF0BC48),
   };
 
   static const Map<String, Color> groupTypeSoftColors = {
-    'GIA_DINH': primarySoftLight,
+    'ONG': accentSoftLight,
+    'BA': amberSoftLight,
+    'BO': primarySoftLight,
+    'ME': secondarySoftLight,
     'VO_CHONG': secondarySoftLight,
-    'CON_CAI': accentSoftLight,
-    'BAN_BE': amberSoftLight,
+    'ANH_CHI_EM': primarySoftLight,
+    'CON': amberSoftLight,
+    'CON_CAI': amberSoftLight,
+    'NGUOI_YEU': accentSoftLight,
+    'BAN_THAN': accentSoftLight,
+    'BAN_BE': primarySoftLight,
+    'GIA_DINH': secondarySoftLight,
+    'NGUOI_THAN': amberSoftLight,
   };
 
   static const Map<String, Color> groupTypeSoftColorsDark = {
-    'GIA_DINH': primarySoftDark,
+    'ONG': accentSoftDark,
+    'BA': amberSoftDark,
+    'BO': primarySoftDark,
+    'ME': secondarySoftDark,
     'VO_CHONG': secondarySoftDark,
-    'CON_CAI': accentSoftDark,
-    'BAN_BE': amberSoftDark,
+    'ANH_CHI_EM': primarySoftDark,
+    'CON': amberSoftDark,
+    'CON_CAI': amberSoftDark,
+    'NGUOI_YEU': accentSoftDark,
+    'BAN_THAN': accentSoftDark,
+    'BAN_BE': primarySoftDark,
+    'GIA_DINH': secondarySoftDark,
+    'NGUOI_THAN': amberSoftDark,
   };
 
   // Kept for backward compatibility with EventModel.eventTypeIcon fallback

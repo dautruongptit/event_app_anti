@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:event_app/core/network/api_exceptions.dart';
 import 'package:event_app/services/event_service.dart';
 import 'package:event_app/models/event.dart';
+import 'package:event_app/models/category.dart';
 
 class EventProvider extends ChangeNotifier {
   final EventService _eventService;
@@ -13,6 +14,7 @@ class EventProvider extends ChangeNotifier {
   List<EventModel> _events = [];
   List<EventModel> _upcomingEvents = [];
   EventModel? _selectedEvent;
+  List<CategoryModel> _categories = [];
 
   int? _filterCategoryId;
   int? _filterRelativeId;
@@ -24,10 +26,26 @@ class EventProvider extends ChangeNotifier {
   List<EventModel> get events => _events;
   List<EventModel> get upcomingEvents => _upcomingEvents;
   EventModel? get selectedEvent => _selectedEvent;
+  List<CategoryModel> get categories => _categories;
   int? get filterCategoryId => _filterCategoryId;
   int? get filterRelativeId => _filterRelativeId;
   int? get filterMonth => _filterMonth;
   int? get filterYear => _filterYear;
+
+  /// Danh mục sự kiện — load 1 lần từ backend (bảng `event_categories`)
+  /// thay vì hardcode ở màn hình. Không đụng [_isLoading] (dùng cho nút
+  /// Lưu của form) vì đây là dữ liệu tra cứu phụ, tải song song lúc mở
+  /// form, không nên khoá thao tác khác trong lúc chờ.
+  Future<void> loadCategories() async {
+    try {
+      _categories = await _eventService.getCategories();
+    } catch (e) {
+      // Không gọi _setError() — nó còn tắt _isLoading (dùng cho nút Lưu),
+      // tác dụng phụ không liên quan tới việc tải danh mục này.
+      _error = apiErrorMessage(e);
+    }
+    notifyListeners();
+  }
 
   Future<void> loadEvents() async {
     _setLoading(true);

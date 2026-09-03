@@ -8,8 +8,9 @@ import '../../../providers/home_provider.dart';
 import '../../../models/event.dart';
 import '../../widgets/nino/bottom_option_sheet.dart';
 import '../../widgets/nino/soft_toggle.dart';
-import '../../widgets/nino/sticky_action_bars.dart';
 import '../../widgets/nino/nino_toast.dart';
+import '../../widgets/nino/connection_error_dialog.dart';
+import '../../../core/network/api_exceptions.dart';
 
 class EventFormScreen extends StatefulWidget {
   final bool isRelativeEvent;
@@ -35,9 +36,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
 
   int? _selectedRelativeId;
   String? _selectedRelativeName;
-  int _selectedCategoryId = 1;
-  String _selectedCategory = 'Sinh nhật';
-  String _selectedCategoryKey = 'SINH_NHAT';
+  // Danh mục giờ load từ backend (xem initState) thay vì hardcode — 3 giá
+  // trị này chỉ có ý nghĩa thật sau khi EventProvider.loadCategories() (và,
+  // nếu đang sửa, _loadExistingEvent()) chạy xong.
+  int? _selectedCategoryId;
+  String _selectedCategory = 'Đang tải…';
+  String _selectedCategoryKey = '';
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime = const TimeOfDay(hour: 14, minute: 0);
   bool _isAllDay = false;
@@ -52,16 +56,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _ReminderItem(label: '3 ngày trước', daysBefore: 3),
     _ReminderItem(label: '1 ngày trước', daysBefore: 1),
     _ReminderItem(label: '1 giờ trước', hoursBefore: 1),
-  ];
-
-  static const List<_CategoryItem> _categories = [
-    _CategoryItem(id: 1, key: 'SINH_NHAT', label: 'Sinh nhật', icon: Icons.cake, color: Color(0xFFFF5A5F)),
-    _CategoryItem(id: 2, key: 'KY_NIEM', label: 'Kỷ niệm', icon: Icons.favorite, color: Color(0xFF8B6BE0)),
-    _CategoryItem(id: 3, key: 'LE', label: 'Lễ/Tết', icon: Icons.card_giftcard, color: Color(0xFFD69C13)),
-    _CategoryItem(id: 4, key: 'NHA_O', label: 'Nhà ở', icon: Icons.home, color: Color(0xFF2F9E97)),
-    _CategoryItem(id: 5, key: 'HOA_DON', label: 'Hóa đơn', icon: Icons.bolt, color: Color(0xFFD69C13)),
-    _CategoryItem(id: 6, key: 'MUA_SAM', label: 'Mua sắm', icon: Icons.shopping_bag, color: Color(0xFF2F9E97)),
-    _CategoryItem(id: 7, key: 'KHAC', label: 'Khác', icon: Icons.more_horiz, color: Color(0xFF8A94A6)),
   ];
 
   static const List<_RepeatOption> _repeatOptions = [
@@ -89,8 +83,35 @@ class _EventFormScreenState extends State<EventFormScreen> {
       _titleController.text = widget.prefillTitle!;
       if (widget.prefillDate != null) _selectedDate = widget.prefillDate!;
     }
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<RelativeProvider>().loadRelatives();
+      final eventProvider = context.read<EventProvider>();
+      await eventProvider.loadCategories();
+      if (!mounted) return;
+      final error = eventProvider.error;
+      if (error != null) {
+        if (isNetworkErrorMessage(error)) {
+          showConnectionErrorDialog(context, onRetry: () => eventProvider.loadCategories());
+        } else {
+          showNinoToast(context, error);
+        }
+      } else if (widget.eventId == null) {
+        // Ngày sinh (bắt buộc lúc thêm người thân, và giờ cũng áp dụng cho
+        // hồ sơ của chính mình) đã tự sinh sẵn 1 sự kiện "Sinh nhật" rồi —
+        // không cho chọn lại danh mục này nữa ở đây để tránh tạo trùng, dù
+        // là sự kiện cho người thân hay cho bản thân. Mặc định sang danh
+        // mục kế tiếp; bỏ qua khi đang SỬA (set trong _loadExistingEvent).
+        final candidates = eventProvider.categories.where((c) => c.code != 'SINH_NHAT').toList();
+        final pool = candidates.isNotEmpty ? candidates : eventProvider.categories;
+        final fallback = pool.isNotEmpty ? pool.first : null;
+        if (fallback != null) {
+          setState(() {
+            _selectedCategoryId = fallback.id;
+            _selectedCategory = fallback.displayName;
+            _selectedCategoryKey = fallback.code;
+          });
+        }
+      }
       if (widget.eventId != null) {
         _loadExistingEvent();
       }
@@ -114,12 +135,13 @@ class _EventFormScreenState extends State<EventFormScreen> {
         _repeatMode = 'Hàng năm';
         _repeatKey = 'YEARLY';
       }
-      try {
-        final cat = _categories.firstWhere((c) => c.id == event.categoryId);
-        _selectedCategoryId = cat.id;
-        _selectedCategory = cat.label;
-        _selectedCategoryKey = cat.key;
-      } catch (_) {}
+      // Sự kiện đã có sẵn tự mang đúng category của nó (categoryId/
+      // categoryName/categoryCode) — không cần tra lại trong danh sách
+      // categories vừa tải (trước đây tra bằng _categories hardcode: nếu
+      // id không khớp bản cứng, âm thầm giữ nguyên default "Sinh nhật").
+      _selectedCategoryId = event.categoryId;
+      _selectedCategory = event.categoryName;
+      _selectedCategoryKey = event.categoryCode;
 
       // Giữ lại MỌI reminder đang bật, kể cả loại không khớp 1 trong 5
       // preset chuẩn (VD: "lặp mỗi N phút cho tới khi đọc" — nhắc uống
@@ -205,6 +227,14 @@ class _EventFormScreenState extends State<EventFormScreen> {
   }
 
   void _showCategoryPicker() {
+    // Ẩn "Sinh nhật" khỏi picker cho mọi loại sự kiện (xem giải thích ở
+    // initState) — người dùng vẫn thấy đúng category cũ trên form nếu
+    // đang sửa 1 sự kiện Sinh nhật có sẵn, chỉ không chọn LẠI được nữa.
+    final categories = context.read<EventProvider>().categories.where((c) => c.code != 'SINH_NHAT').toList();
+    if (categories.isEmpty) {
+      showNinoToast(context, 'Chưa tải được danh mục, vui lòng thử lại');
+      return;
+    }
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
@@ -227,10 +257,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
                   child: ListView.builder(
                     shrinkWrap: true,
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 22),
-                    itemCount: _categories.length,
+                    itemCount: categories.length,
                     itemBuilder: (context, i) {
-                      final cat = _categories[i];
-                      final isSelected = cat.key == _selectedCategoryKey;
+                      final cat = categories[i];
+                      final isSelected = cat.code == _selectedCategoryKey;
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 2),
                         child: Material(
@@ -241,8 +271,8 @@ class _EventFormScreenState extends State<EventFormScreen> {
                             onTap: () {
                               setState(() {
                                 _selectedCategoryId = cat.id;
-                                _selectedCategory = cat.label;
-                                _selectedCategoryKey = cat.key;
+                                _selectedCategory = cat.displayName;
+                                _selectedCategoryKey = cat.code;
                               });
                               Navigator.of(context).pop();
                             },
@@ -254,12 +284,12 @@ class _EventFormScreenState extends State<EventFormScreen> {
                                     width: 38,
                                     height: 38,
                                     decoration: BoxDecoration(color: cat.color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
-                                    child: Icon(cat.icon, color: cat.color, size: 19),
+                                    child: Icon(cat.iconData, color: cat.color, size: 19),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      cat.label,
+                                      cat.displayName,
                                       style: TextStyle(fontSize: 15, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500, color: isSelected ? cat.color : txt),
                                     ),
                                   ),
@@ -308,6 +338,10 @@ class _EventFormScreenState extends State<EventFormScreen> {
   void _saveEvent() {
     if (_titleController.text.trim().isEmpty) {
       showNinoToast(context, 'Vui lòng nhập tên sự kiện');
+      return;
+    }
+    if (_selectedCategoryId == null) {
+      showNinoToast(context, 'Vui lòng chọn danh mục');
       return;
     }
     // Gộp mỗi _ReminderItem thành ĐÚNG 1 reminder (khớp shape 1 EventReminder
@@ -436,16 +470,21 @@ class _EventFormScreenState extends State<EventFormScreen> {
                       decoration: BoxDecoration(color: card, borderRadius: BorderRadius.circular(18), border: Border.all(color: line2)),
                       child: Column(
                         children: [
-                          _pickerRow(
-                            icon: '👤',
-                            iconBg: priSoft,
-                            label: 'Người thân',
-                            value: _selectedRelativeName ?? 'Không có',
-                            valueColor: _selectedRelativeName != null ? txt : mut,
-                            onTap: _showRelativePicker,
-                            border: Border(bottom: BorderSide(color: line)),
-                            txt: txt,
-                          ),
+                          // Sự kiện "cho Bản thân" (isRelativeEvent=false,
+                          // xem app_router: type == 'self') không gắn với
+                          // người thân nào — trước đây ô này luôn hiện bất
+                          // kể loại sự kiện, cho chọn người thân vô nghĩa.
+                          if (widget.isRelativeEvent)
+                            _pickerRow(
+                              icon: '👤',
+                              iconBg: priSoft,
+                              label: 'Người thân',
+                              value: _selectedRelativeName ?? 'Không có',
+                              valueColor: _selectedRelativeName != null ? txt : mut,
+                              onTap: _showRelativePicker,
+                              border: Border(bottom: BorderSide(color: line)),
+                              txt: txt,
+                            ),
                           _pickerRow(
                             icon: '🏷',
                             iconBg: mintSoft,
@@ -586,7 +625,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 ),
               ),
             ),
-            StickySaveBar(label: 'Lưu sự kiện', onPressed: isLoading ? null : _saveEvent, loading: isLoading),
           ],
         ),
       ),
@@ -664,15 +702,6 @@ class _EventFormScreenState extends State<EventFormScreen> {
       ),
     );
   }
-}
-
-class _CategoryItem {
-  final int id;
-  final String key;
-  final String label;
-  final IconData icon;
-  final Color color;
-  const _CategoryItem({required this.id, required this.key, required this.label, required this.icon, required this.color});
 }
 
 class _RepeatOption {

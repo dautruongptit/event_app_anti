@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../core/utils/category_icons.dart';
+import '../core/utils/relationship_emoji.dart';
 
 class EventModel {
   final int id;
@@ -116,24 +118,9 @@ class EventModel {
   }
 
   IconData get eventTypeIcon {
-    final iconMap = {
-      'cake': Icons.cake_rounded,
-      'favorite': Icons.favorite_rounded,
-      'celebration': Icons.celebration_rounded,
-      'home': Icons.home_rounded,
-      'receipt_long': Icons.receipt_long_rounded,
-      'shopping_bag': Icons.shopping_bag_rounded,
-      'event': Icons.event_rounded,
-      'card_giftcard': Icons.card_giftcard_rounded,
-      'bolt': Icons.bolt_rounded,
-      'more_horiz': Icons.more_horiz_rounded,
-    };
-    
-    if (categoryIcon.isNotEmpty && iconMap.containsKey(categoryIcon)) {
-      return iconMap[categoryIcon]!;
-    }
-    
-    // Fallback based on category code for backward compatibility
+    if (categoryIcon.isNotEmpty) return iconForCategoryIcon(categoryIcon);
+    // Fallback dựa theo categoryCode — cho event cũ trước khi backend có
+    // cột categoryIcon (categoryIcon rỗng nhưng categoryCode vẫn có).
     const oldMap = {
       'SINH_NHAT': Icons.cake_rounded,
       'KY_NIEM': Icons.favorite_rounded,
@@ -145,16 +132,14 @@ class EventModel {
     };
     return oldMap[categoryCode] ?? Icons.event_rounded;
   }
-  
-  Color get categoryColorValue {
-    if (categoryColor.isEmpty) return Colors.grey;
-    String hexStr = categoryColor.replaceAll('#', '');
-    if (hexStr.length == 6) {
-      hexStr = 'FF$hexStr';
-    }
-    int? val = int.tryParse(hexStr, radix: 16);
-    return val != null ? Color(val) : Colors.grey;
-  }
+
+  Color get categoryColorValue => colorFromHex(categoryColor);
+
+  /// Emoji quan hệ của người thân gắn với sự kiện — null nếu là sự kiện
+  /// cho bản thân (relativeGroupType null). Dùng cho chip chủ sở hữu ở
+  /// màn Sự kiện.
+  String? get relativeGroupTypeEmoji =>
+      relativeGroupType != null ? emojiForGroupType(relativeGroupType!) : null;
 
   bool get isPast => eventDate.isBefore(DateTime.now());
 

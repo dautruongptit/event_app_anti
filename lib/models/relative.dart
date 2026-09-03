@@ -1,4 +1,5 @@
 import 'package:event_app/models/event.dart';
+import '../core/utils/relationship_emoji.dart';
 
 class RelativeModel {
   final int id;
@@ -96,24 +97,7 @@ class RelativeModel {
 
   /// Emoji đại diện quan hệ — khớp đúng bộ icon dùng ở picker "Quan hệ"
   /// (RelativeFormScreen._groupTypes) để avatar và picker luôn đồng nhất.
-  String get groupTypeEmoji {
-    const map = {
-      'GIA_DINH': '👨‍👩‍👧',
-      'CON_CAI': '👶',
-      'BAN_BE': '👤',
-      'BAN_THAN': '🧑',
-      'ONG': '👴',
-      'BA': '👵',
-      'BO': '👨',
-      'ME': '👩',
-      'VO_CHONG': '💍',
-      'ANH_CHI_EM': '🧒',
-      'CON': '👶',
-      'NGUOI_YEU': '💕',
-      'NGUOI_THAN': '👤',
-    };
-    return map[groupType] ?? '👤';
-  }
+  String get groupTypeEmoji => emojiForGroupType(groupType);
 
   String get genderDisplay {
     const map = {
@@ -230,24 +214,7 @@ class RelativeDetailModel {
 
   /// Emoji đại diện quan hệ — khớp đúng bộ icon dùng ở picker "Quan hệ"
   /// (RelativeFormScreen._groupTypes) để avatar và picker luôn đồng nhất.
-  String get groupTypeEmoji {
-    const map = {
-      'GIA_DINH': '👨‍👩‍👧',
-      'CON_CAI': '👶',
-      'BAN_BE': '👤',
-      'BAN_THAN': '🧑',
-      'ONG': '👴',
-      'BA': '👵',
-      'BO': '👨',
-      'ME': '👩',
-      'VO_CHONG': '💍',
-      'ANH_CHI_EM': '🧒',
-      'CON': '👶',
-      'NGUOI_YEU': '💕',
-      'NGUOI_THAN': '👤',
-    };
-    return map[groupType] ?? '👤';
-  }
+  String get groupTypeEmoji => emojiForGroupType(groupType);
 
   String get genderDisplay {
     const map = {

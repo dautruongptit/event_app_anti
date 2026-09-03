@@ -34,6 +34,7 @@ class ApiConstants {
   // Events
   static const String events = '$apiPrefix/events';
   static const String upcomingEvents = '$apiPrefix/events/upcoming';
+  static const String eventCategories = '$apiPrefix/events/categories';
   static String eventById(int id) => '$apiPrefix/events/$id';
 
   // Home

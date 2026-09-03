@@ -44,6 +44,31 @@ class AppDateUtils {
     return 'Còn $days ngày';
   }
 
+  /// Nhãn "N ngày/tháng/năm trước" cho sự kiện đã qua ở nhóm ĐÃ QUA màn Sự
+  /// kiện — khớp exports/Screenshot 2026-09-03 121127.png. Tính theo lịch
+  /// (năm/tháng/ngày) chứ không chia tròn số ngày, để "đúng 1 năm trước"
+  /// luôn ra "1 năm trước" thay vì lệch do tháng thiếu/đủ ngày khác nhau.
+  static String pastRelativeLabel(DateTime eventDate, {DateTime? now}) {
+    final today = _dateOnly(now ?? DateTime.now());
+    final date = _dateOnly(eventDate);
+    if (!date.isBefore(today)) return 'Hôm nay';
+
+    var years = today.year - date.year;
+    var months = today.month - date.month;
+    if (today.day < date.day) months -= 1;
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+    final totalMonths = years * 12 + months;
+
+    if (totalMonths >= 12) return '${totalMonths ~/ 12} năm trước';
+    if (totalMonths >= 1) return '$totalMonths tháng trước';
+    return '${today.difference(date).inDays} ngày trước';
+  }
+
+  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
   static int? calculateAge(DateTime? dateOfBirth) {
     if (dateOfBirth == null) return null;
     final now = DateTime.now();
