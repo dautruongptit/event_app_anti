@@ -110,7 +110,7 @@ void main() {
     expect(find.text('Hôm nay'), findsWidgets); // header days-label + row "Ngày"
     expect(find.text('08:00'), findsOneWidget);
     expect(find.text('Hàng năm'), findsOneWidget);
-    expect(find.text('1 ngày trước'), findsOneWidget);
+    expect(find.text('Trước 1 ngày'), findsOneWidget);
     expect(find.text('Chưa có ghi chú'), findsOneWidget);
   });
 

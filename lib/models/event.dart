@@ -197,10 +197,10 @@ class ReminderModel {
 
   String get displayText {
     if (remindDaysBefore != null && remindDaysBefore! > 0) {
-      return '$remindDaysBefore ngày trước';
+      return 'Trước $remindDaysBefore ngày';
     }
     if (remindHoursBefore != null && remindHoursBefore! > 0) {
-      return '$remindHoursBefore giờ trước';
+      return 'Trước $remindHoursBefore giờ';
     }
     return 'Ngay lúc sự kiện';
   }
