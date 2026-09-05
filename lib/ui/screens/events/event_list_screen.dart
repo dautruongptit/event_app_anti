@@ -6,8 +6,8 @@ import '../../../core/constants/vn_holidays.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../core/utils/event_list_sort.dart';
 import '../../../providers/event_provider.dart';
-import '../../../models/event.dart';
 import '../../widgets/nino/card_row.dart';
+import '../../widgets/nino/event_owner_chip.dart';
 import '../../widgets/nino/pill_tabs.dart';
 import '../../widgets/nino/event_sort_sheet.dart';
 import '../../widgets/nino/sticky_action_bars.dart';
@@ -49,69 +49,8 @@ class _EventListScreenState extends State<EventListScreen> {
     }
   }
 
-  /// Nhãn số ngày tới sự kiện, đặt CÙNG HÀNG với ngày/giờ (meta) ở màn Sự
-  /// kiện — "Hôm nay" (đỏ) hoặc "N ngày" (cam) cho sự kiện sắp tới. Trước
-  /// đây widget này được xếp ngay dưới chip chủ sở hữu (titleTrailing ở
-  /// hàng tiêu đề) nên trôi nổi lệch hàng so với dòng ngày/giờ; nay dùng
-  /// CardRow.metaTrailing để thẳng hàng đúng như thiết kế
-  /// exports/Screenshot 2026-09-02 185127.png.
-  ///
-  /// Sự kiện đã qua đổi sang nhãn "N ngày/tháng/năm trước" màu xám nhạt,
-  /// khớp exports/Screenshot 2026-09-03 121127.png (nhóm ĐÃ QUA).
-  Widget? _daysLabel(EventModel event, bool isDark) {
-    final daysUntil = event.daysUntil;
-    if (daysUntil == null) return null;
-    if (daysUntil < 0) {
-      final mut = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
-      return Text(
-        AppDateUtils.pastRelativeLabel(event.eventDate),
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: mut),
-      );
-    }
-    final String daysLabel = daysUntil == 0 ? 'Hôm nay' : '$daysUntil ngày';
-    final daysColor = daysUntil == 0
-        ? (isDark ? AppColors.errorDark : AppColors.error)
-        : (isDark ? AppColors.amberDark : AppColors.amberLight);
-    return Text(daysLabel, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: daysColor));
-  }
-
-  /// Chip nhỏ ở góc phải tiêu đề mỗi sự kiện, cho biết sự kiện này của ai
-  /// — "🔔 Tôi" (relativeId null, sự kiện cho bản thân — khớp thiết kế
-  /// exports/Screenshot 2026-09-02 185127.png) hoặc icon quan hệ + TÊN
-  /// QUAN HỆ (VD "Vợ (Chồng)", "Mẹ" — không phải tên riêng của người
-  /// thân), nền theo đúng màu của quan hệ đó (khớp màu avatar ở màn
-  /// Người thân/Home để nhận diện nhất quán).
-  Widget _ownerChip(EventModel event, bool isDark) {
-    final isSelf = event.relativeId == null;
-    final label = isSelf ? 'Tôi' : (event.relativeGroupTypeDisplay ?? 'Người thân');
-    final emoji = isSelf ? '🔔' : (event.relativeGroupTypeEmoji ?? '👤');
-    final color = isDark
-        ? (AppColors.groupTypeColorsDark[event.relativeGroupType] ?? AppColors.primaryDark)
-        : (AppColors.groupTypeColors[event.relativeGroupType] ?? AppColors.primaryLight);
-    final softColor = isDark
-        ? (AppColors.groupTypeSoftColorsDark[event.relativeGroupType] ?? AppColors.primarySoftDark)
-        : (AppColors.groupTypeSoftColors[event.relativeGroupType] ?? AppColors.primarySoftLight);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: softColor, borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 11)),
-          const SizedBox(width: 3),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 84),
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: color),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // _daysLabel/_ownerChip sống ở event_owner_chip.dart (eventDaysLabel/
+  // ownerChip) — dùng chung với màn Chi tiết sự kiện, xem chi tiết ở đó.
 
   void _onStatusFilterChanged(EventStatusFilter filter) {
     setState(() => _statusFilter = filter);
@@ -267,7 +206,7 @@ class _EventListScreenState extends State<EventListScreen> {
                                         onTap: () => context.push('/events/${event.id}'),
                                         leading: SquareIconBadge(icon: event.eventTypeIcon, color: event.categoryColorValue, background: event.categoryColorValue.withValues(alpha: 0.15)),
                                         title: event.title,
-                                        titleTrailing: _ownerChip(event, isDark),
+                                        titleTrailing: ownerChip(event, isDark),
                                         meta: Row(
                                           children: [
                                             Flexible(child: Text(AppDateUtils.formatDate(event.eventDate), style: TextStyle(fontSize: 12, color: mut), overflow: TextOverflow.ellipsis)),
@@ -277,7 +216,7 @@ class _EventListScreenState extends State<EventListScreen> {
                                             ],
                                           ],
                                         ),
-                                        metaTrailing: _daysLabel(event, isDark),
+                                        metaTrailing: eventDaysLabel(event, isDark),
                                         trailing: PopupMenuButton<String>(
                                           // Đã đo pixel thực tế so với ảnh thiết kế: dùng `icon:` (dù
                                           // padding:0) vẫn bọc trong IconButton mặc định có vùng chạm
